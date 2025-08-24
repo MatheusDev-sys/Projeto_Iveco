@@ -1,1 +1,592 @@
 
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma ADCA</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Leaflet.js for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <style>
+        /* Custom styles to apply the Inter font */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F5F7FA;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #003366; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #002244; }
+
+        /* Custom Radio Button for Profile Selector */
+        .profile-radio-label {
+            border: 2px solid #e5e7eb;
+            transition: all 0.2s ease-in-out;
+        }
+        .profile-radio-input:checked + .profile-radio-label {
+            border-color: #003366;
+            background-color: #e0e8f0;
+            box-shadow: 0 0 0 2px rgba(0, 51, 102, 0.2);
+        }
+        
+        /* Wizard Steps Styling */
+        .step-item { display: flex; align-items: center; color: #9ca3af; transition: all 0.3s ease; }
+        .step-item.active { color: #003366; font-weight: 600; }
+        .step-item.completed { color: #00C853; }
+        .step-item .step-circle { width: 2.5rem; height: 2.5rem; border-radius: 50%; border: 2px solid #9ca3af; display: flex; align-items: center; justify-content: center; margin-right: 0.75rem; font-weight: 600; }
+        .step-item.active .step-circle { border-color: #003366; background-color: #003366; color: white; }
+        .step-item.completed .step-circle { border-color: #00C853; background-color: #00C853; color: white; }
+        .step-connector { flex-grow: 1; height: 2px; background-color: #e5e7eb; margin: 0 1rem; }
+
+        /* Mobile App Simulation */
+        .mobile-app-frame {
+            width: 375px;
+            height: 812px;
+            border: 12px solid #1a202c;
+            border-radius: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            position: relative;
+            background-color: #F5F7FA;
+            overflow: hidden;
+        }
+        .mobile-app-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.3s ease-in-out;
+            transform: translateX(0);
+        }
+        .mobile-app-screen.hidden {
+            transform: translateX(100%);
+        }
+        .leaflet-container {
+            z-index: 1;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- Main Container -->
+    <div id="app-container">
+
+        <!-- ================================================== -->
+        <!-- LOGIN PAGE -->
+        <!-- ================================================== -->
+        <div id="login-page" class="flex items-center justify-center min-h-screen bg-[#F5F7FA]">
+            <div class="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-xl">
+                <div class="text-center">
+                    <img src="https://placehold.co/150x40/FFFFFF/003366?text=IVECO+GROUP" alt="Logo IVECO Group" class="mx-auto mb-2" onerror="this.onerror=null;this.src='https://placehold.co/150x40/FFFFFF/003366?text=IVECO+GROUP';">
+                    <h1 class="text-2xl font-bold text-[#003366]">Plataforma ADCA</h1>
+                </div>
+                
+                <form class="space-y-6" onsubmit="event.preventDefault(); login();">
+                    <div>
+                        <label class="text-sm font-medium text-gray-600 mb-2 block">Acessar como:</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <input type="radio" name="profile" id="profile-fornecedor" value="fornecedor" class="hidden profile-radio-input" checked>
+                                <label for="profile-fornecedor" class="profile-radio-label cursor-pointer p-3 text-center rounded-lg block text-sm font-semibold">Fornecedor</label>
+                            </div>
+                            <div>
+                                <input type="radio" name="profile" id="profile-transportadora" value="transportadora" class="hidden profile-radio-input">
+                                <label for="profile-transportadora" class="profile-radio-label cursor-pointer p-3 text-center rounded-lg block text-sm font-semibold">Transportadora</label>
+                            </div>
+                            <div>
+                                <input type="radio" name="profile" id="profile-iveco" value="iveco" class="hidden profile-radio-input">
+                                <label for="profile-iveco" class="profile-radio-label cursor-pointer p-3 text-center rounded-lg block text-sm font-semibold">IVECO</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="email" class="text-sm font-medium text-gray-600">E-mail Corporativo</label>
+                        <input id="email" name="email" type="text" autocomplete="email" required class="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#00C853] focus:border-[#00C853]" placeholder="seuemail@empresa.com">
+                    </div>
+                    <div class="relative">
+                        <label for="password" class="text-sm font-medium text-gray-600">Senha</label>
+                        <input id="password" name="password" type="password" autocomplete="current-password" required class="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#00C853] focus:border-[#00C853]" placeholder="••••••••">
+                        <button type="button" onclick="togglePassword()" class="absolute inset-y-0 right-0 top-6 pr-3 flex items-center text-sm leading-5">
+                            <i id="password-icon" data-lucide="eye-off" class="h-5 w-5 text-gray-500"></i>
+                        </button>
+                    </div>
+                    <div>
+                        <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-lg font-bold text-white bg-[#00C853] hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-transform transform hover:scale-105">
+                            Acessar Plataforma
+                        </button>
+                    </div>
+                </form>
+                <div class="mt-6 border-t pt-4">
+                    <div class="flex items-center justify-center text-xs text-gray-500">
+                        <i data-lucide="shield-check" class="h-4 w-4 mr-2 text-green-600"></i>
+                        <span>Ambiente Seguro. Todos os dados são criptografados. Login com 2FA.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================================================== -->
+        <!-- MAIN APPLICATION VIEW (after login) -->
+        <!-- ================================================== -->
+        <div id="main-app" class="hidden">
+            <!-- This will be populated by JS based on user role -->
+        </div>
+
+    </div>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide-icons@0.372.0/dist/lucide.min.js" onload="initializeApp()"></script>
+
+    <script>
+        // ==================================================
+        // APP LOGIC - All functions are defined here
+        // ==================================================
+        const templates = {
+            fornecedor: `
+                <div class="flex h-screen bg-[#F5F7FA]">
+                    <nav class="w-64 bg-[#003366] text-white flex flex-col">
+                        <div class="p-6 text-center border-b border-blue-800">
+                            <h1 class="text-2xl font-bold">Plataforma ADCA</h1>
+                            <span class="text-sm text-gray-300">Perfil Fornecedor</span>
+                        </div>
+                        <ul class="flex-1 mt-6">
+                            <li><a href="#" onclick="showContentPage('fornecedor-dashboard')" class="nav-link active flex items-center px-6 py-3 text-gray-300 hover:bg-blue-800 hover:text-white"><i data-lucide="layout-dashboard" class="h-5 w-5 mr-3"></i>Dashboard</a></li>
+                            <li><a href="#" onclick="showContentPage('fornecedor-reportar')" class="nav-link flex items-center px-6 py-3 text-gray-300 hover:bg-blue-800 hover:text-white"><i data-lucide="file-up" class="h-5 w-5 mr-3"></i>Reportar Dados</a></li>
+                            <li><a href="#" onclick="showContentPage('fornecedor-logistica')" class="nav-link flex items-center px-6 py-3 text-gray-300 hover:bg-blue-800 hover:text-white"><i data-lucide="truck" class="h-5 w-5 mr-3"></i>Logística SYNAPSE</a></li>
+                        </ul>
+                        <div class="p-6 border-t border-blue-800"><a href="#" onclick="logout()" class="flex items-center w-full px-4 py-2 text-sm text-gray-300 rounded-lg hover:bg-red-700 hover:text-white"><i data-lucide="log-out" class="h-5 w-5 mr-3"></i>Sair</a></div>
+                    </nav>
+                    <main class="flex-1 flex flex-col overflow-hidden">
+                        <header class="flex justify-between items-center p-4 bg-white border-b">
+                            <h1 id="page-title" class="text-2xl font-bold text-gray-800">Dashboard</h1>
+                            <div class="flex items-center">
+                                <span class="text-right mr-4"><p class="font-semibold text-gray-700">Fornecedor Exemplo S.A.</p><p class="text-sm text-gray-500">CNPJ: 00.123.456/0001-00</p></span>
+                                <img src="https://placehold.co/40x40/003366/FFFFFF?text=FE" alt="Logo Fornecedor" class="h-10 w-10 rounded-full object-cover">
+                            </div>
+                        </header>
+                        <div class="flex-1 p-6 overflow-y-auto">
+                            <!-- FORNECEDOR DASHBOARD -->
+                            <div id="fornecedor-dashboard-content" class="page-content">
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    <div class="bg-white p-6 rounded-xl shadow-md"><h3 class="font-semibold text-gray-600">Performance de Carbono (Anual)</h3><p class="text-3xl font-bold text-[#003366] mt-2">1.250 tCO₂e</p><span class="text-sm text-green-600 font-semibold">Selo de Verificação 2024</span></div>
+                                    <div class="bg-white p-6 rounded-xl shadow-md"><h3 class="font-semibold text-gray-600">Reporte Mensal Atual (Agosto)</h3><p class="text-2xl font-bold text-[#007BFF] mt-2">Aguardando Consolidação</p><span class="text-sm text-gray-500">Submetido em 20/08/2025</span></div>
+                                    <div class="bg-white p-6 rounded-xl shadow-md"><h3 class="font-semibold text-gray-600">Logística (Módulo SYNAPSE)</h3><p class="text-3xl font-bold text-[#003366] mt-2">5 Cargas Enviadas</p><span class="text-sm text-gray-500">Eficiência de Frete: 92%</span></div>
+                                    <div class="bg-yellow-100 border-l-4 border-yellow-500 p-6 rounded-r-lg"><h3 class="font-bold text-yellow-800">Alertas e Ações</h3><p class="text-yellow-700 mt-2">⚠️ Prazo para o reporte de Setembro se aproxima (30/09).</p></div>
+                                </div>
+                            </div>
+                            <!-- FORNECEDOR REPORTAR DADOS -->
+                            <div id="fornecedor-reportar-content" class="page-content hidden">
+                                <div class="max-w-4xl mx-auto bg-white p-8 rounded-2xl shadow-lg">
+                                    <!-- Wizard Steps -->
+                                    <div id="wizard-steps" class="flex items-center mb-8">
+                                        <div class="step-item active" data-step="1"><div class="step-circle">1</div><span>Período</span></div>
+                                        <div class="step-connector"></div>
+                                        <div class="step-item" data-step="2"><div class="step-circle">2</div><span>Upload</span></div>
+                                        <div class="step-connector"></div>
+                                        <div class="step-item" data-step="3"><div class="step-circle">3</div><span>Validação</span></div>
+                                        <div class="step-connector"></div>
+                                        <div class="step-item" data-step="4"><div class="step-circle">4</div><span>Submissão</span></div>
+                                    </div>
+                                    <!-- Wizard Content -->
+                                    <div id="wizard-content">
+                                        <div class="wizard-step" data-step="1">
+                                            <h2 class="text-2xl font-bold text-gray-800 mb-6">Passo 1: Seleção do Período</h2>
+                                            <!-- Period selection content -->
+                                            <div class="mt-8 text-right"><button onclick="goToStep(2)" class="px-6 py-2 bg-[#00C853] text-white font-semibold rounded-lg">Avançar</button></div>
+                                        </div>
+                                        <div class="wizard-step hidden" data-step="2">
+                                            <h2 class="text-2xl font-bold text-gray-800 mb-6">Passo 2: Upload de Evidências</h2>
+                                            <div class="space-y-4">
+                                                <!-- Electricity Drawer -->
+                                                <div class="bg-gray-50 p-4 rounded-lg border">
+                                                    <h3 class="font-semibold flex items-center"><i data-lucide="zap" class="h-5 w-5 mr-2 text-yellow-500"></i>Energia Elétrica</h3>
+                                                    <div class="mt-2 border-2 border-dashed rounded-lg p-6 text-center">Arraste e solte o PDF da conta de luz aqui.</div>
+                                                </div>
+                                                <!-- Fuels Drawer -->
+                                                <div class="bg-gray-50 p-4 rounded-lg border">
+                                                    <h3 class="font-semibold flex items-center"><i data-lucide="flame" class="h-5 w-5 mr-2 text-red-500"></i>Combustíveis (Gás, Diesel, etc.)</h3>
+                                                    <div class="mt-2 border-2 border-dashed rounded-lg p-6 text-center">Arraste e solte as faturas aqui.</div>
+                                                </div>
+                                                <!-- Production Drawer -->
+                                                <div class="bg-gray-50 p-4 rounded-lg border">
+                                                    <h3 class="font-semibold flex items-center"><i data-lucide="factory" class="h-5 w-5 mr-2 text-gray-600"></i>Dados de Produção</h3>
+                                                    <div class="mt-2 border-2 border-dashed rounded-lg p-6 text-center">Arraste e solte a planilha (XLSX/CSV) aqui.</div>
+                                                </div>
+                                            </div>
+                                            <div class="mt-8 flex justify-between">
+                                                <button onclick="goToStep(1)" class="px-6 py-2 bg-gray-300 rounded-lg">Voltar</button>
+                                                <button onclick="goToStep(3)" class="px-6 py-2 bg-[#00C853] text-white font-semibold rounded-lg">Avançar</button>
+                                            </div>
+                                        </div>
+                                        <div class="wizard-step hidden" data-step="3">
+                                            <h2 class="text-2xl font-bold text-gray-800 mb-6">Passo 3: Validação e Cálculo</h2>
+                                            <div class="bg-blue-50 p-6 rounded-lg text-center">
+                                                <p>Processando documentos...</p>
+                                                <div id="processing-summary" class="hidden mt-4 text-left space-y-2">
+                                                    <h4 class="font-bold">Dados Extraídos:</h4>
+                                                    <p>✅ 50.000 kWh de energia</p>
+                                                    <p>✅ 15.000 m³ de gás</p>
+                                                    <p>✅ Produção: 10.000 unidades</p>
+                                                    <hr class="my-2">
+                                                    <p class="font-bold text-lg">Emissões calculadas: <span class="text-[#003366]">15.2 tCO₂e</span></p>
+                                                </div>
+                                            </div>
+                                            <div class="mt-8 flex justify-between">
+                                                <button onclick="goToStep(2)" class="px-6 py-2 bg-gray-300 rounded-lg">Voltar</button>
+                                                <button onclick="goToStep(4)" class="px-6 py-2 bg-[#00C853] text-white font-semibold rounded-lg">Avançar</button>
+                                            </div>
+                                        </div>
+                                        <div class="wizard-step hidden" data-step="4">
+                                            <h2 class="text-2xl font-bold text-gray-800 mb-6">Passo 4: Submissão</h2>
+                                            <div class="text-center">
+                                                <p>Confirme para submeter o relatório mensal para consolidação.</p>
+                                                <button onclick="alert('Relatório submetido com sucesso!')" class="mt-6 w-full py-3 font-bold text-white bg-[#00C853] rounded-lg text-lg">Confirmar e Submeter Relatório Mensal</button>
+                                            </div>
+                                             <div class="mt-8 flex justify-between">
+                                                <button onclick="goToStep(3)" class="px-6 py-2 bg-gray-300 rounded-lg">Voltar</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- FORNECEDOR LOGISTICA -->
+                            <div id="fornecedor-logistica-content" class="page-content hidden">
+                                <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                                    <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md">
+                                        <h3 class="text-xl font-bold text-[#003366] mb-4">Notificar Carga Pronta</h3>
+                                        <form class="space-y-4">
+                                            <div><label class="text-sm">Peso (kg)</label><input type="number" class="mt-1 block w-full p-2 border rounded-md"></div>
+                                            <div><label class="text-sm">Tipo de Carga</label><input type="text" class="mt-1 block w-full p-2 border rounded-md"></div>
+                                            <div><label class="text-sm">Observações</label><textarea class="mt-1 block w-full p-2 border rounded-md"></textarea></div>
+                                            <button type="button" class="w-full py-3 font-bold text-white bg-[#00C853] rounded-lg">Gerar QR Code da Carga</button>
+                                        </form>
+                                    </div>
+                                    <div class="lg:col-span-3 bg-white p-6 rounded-xl shadow-md">
+                                        <h3 class="text-xl font-bold text-[#003366] mb-4">Minhas Entregas</h3>
+                                        <table class="w-full text-sm text-left">
+                                            <thead class="bg-gray-50"><tr><th class="p-2">Data</th><th>Status</th><th>kgCO₂e</th></tr></thead>
+                                            <tbody>
+                                                <tr class="border-b"> <td class="p-2">22/08/2025</td> <td><span class="bg-green-100 text-green-800 px-2 py-1 rounded-full">Entregue</span></td> <td>150.5</td> </tr>
+                                                <tr class="border-b"> <td class="p-2">21/08/2025</td> <td><span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Em Trânsito</span></td> <td>-</td> </tr>
+                                                <tr class="border-b"> <td class="p-2">20/08/2025</td> <td><span class="bg-gray-200 text-gray-800 px-2 py-1 rounded-full">Coletado</span></td> <td>-</td> </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            `,
+            transportadora: `
+                <div class="flex h-screen bg-[#F5F7FA]">
+                    <nav class="w-64 bg-[#003366] text-white flex flex-col">
+                        <div class="p-6 text-center border-b border-blue-800">
+                            <h1 class="text-2xl font-bold">Plataforma ADCA</h1>
+                            <span class="text-sm text-gray-300">Perfil Transportadora</span>
+                        </div>
+                        <ul class="flex-1 mt-6">
+                            <li><a href="#" onclick="showContentPage('transportadora-dashboard')" class="nav-link active flex items-center px-6 py-3 text-gray-300 hover:bg-blue-800 hover:text-white"><i data-lucide="layout-dashboard" class="h-5 w-5 mr-3"></i>Dashboard</a></li>
+                            <li><a href="#" onclick="showContentPage('transportadora-oportunidades')" class="nav-link flex items-center px-6 py-3 text-gray-300 hover:bg-blue-800 hover:text-white"><i data-lucide="search" class="h-5 w-5 mr-3"></i>Ofertas de Frete</a></li>
+                            <li><a href="#" onclick="showContentPage('transportadora-app')" class="nav-link flex items-center px-6 py-3 text-gray-300 hover:bg-blue-800 hover:text-white"><i data-lucide="smartphone" class="h-5 w-5 mr-3"></i>App do Motorista</a></li>
+                        </ul>
+                        <div class="p-6 border-t border-blue-800"><a href="#" onclick="logout()" class="flex items-center w-full px-4 py-2 text-sm text-gray-300 rounded-lg hover:bg-red-700 hover:text-white"><i data-lucide="log-out" class="h-5 w-5 mr-3"></i>Sair</a></div>
+                    </nav>
+                    <main class="flex-1 flex flex-col overflow-hidden">
+                        <header class="flex justify-between items-center p-4 bg-white border-b">
+                            <h1 id="page-title" class="text-2xl font-bold text-gray-800">Dashboard</h1>
+                            <div class="flex items-center">
+                                <span class="text-right mr-4"><p class="font-semibold text-gray-700">Transportadora Veloz Ltda.</p></span>
+                                <img src="https://placehold.co/40x40/00C853/FFFFFF?text=TV" alt="Logo Transportadora" class="h-10 w-10 rounded-full object-cover">
+                            </div>
+                        </header>
+                        <div class="flex-1 p-6 overflow-y-auto">
+                            <!-- TRANSPORTADORA DASHBOARD -->
+                            <div id="transportadora-dashboard-content" class="page-content">
+                                <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                                    <div class="bg-white p-6 rounded-xl shadow-md text-center"><h3 class="font-semibold text-gray-600">Viagens Ativas</h3><p class="text-4xl font-bold text-[#003366] mt-2">8</p></div>
+                                    <div class="bg-white p-6 rounded-xl shadow-md text-center"><h3 class="font-semibold text-gray-600">Ofertas de Frete</h3><p class="text-4xl font-bold text-[#00C853] mt-2">12</p></div>
+                                    <div class="bg-white p-6 rounded-xl shadow-md text-center"><h3 class="font-semibold text-gray-600">Performance Emissões</h3><p class="text-3xl font-bold text-[#003366] mt-2">85 <span class="text-base font-normal">gCO₂e/t.km</span></p></div>
+                                    <div class="bg-white p-6 rounded-xl shadow-md text-center"><h3 class="font-semibold text-gray-600">Pontualidade</h3><p class="text-4xl font-bold text-[#003366] mt-2">98%</p></div>
+                                </div>
+                            </div>
+                            <!-- TRANSPORTADORA OPORTUNIDADES -->
+                            <div id="transportadora-oportunidades-content" class="page-content hidden">
+                                <div class="space-y-4">
+                                    <div class="bg-white p-4 rounded-lg shadow-md flex justify-between items-center">
+                                        <div><span class="font-bold">Betim/MG -> Sete Lagoas/MG</span><p class="text-sm text-gray-600">Peso: 12.000 kg | Carga: Peças Estampadas</p></div>
+                                        <div><span class="bg-blue-200 text-blue-800 text-xs font-bold mr-2 px-2.5 py-0.5 rounded-full">Frete Direto</span><button class="bg-[#007BFF] text-white px-4 py-2 rounded-lg text-sm font-semibold">Ver Detalhes</button></div>
+                                    </div>
+                                    <div class="bg-white p-4 rounded-lg shadow-md flex justify-between items-center">
+                                        <div><span class="font-bold">Contagem/MG -> Sete Lagoas/MG</span><p class="text-sm text-gray-600">Peso: 5.000 kg | Carga: Componentes Plásticos</p></div>
+                                        <div><span class="bg-green-200 text-green-800 text-xs font-bold mr-2 px-2.5 py-0.5 rounded-full">Milk Run</span><button class="bg-[#007BFF] text-white px-4 py-2 rounded-lg text-sm font-semibold">Ver Detalhes</button></div>
+                                    </div>
+                                </div>
+                            </div>
+                             <!-- TRANSPORTADORA APP SIMULATOR -->
+                            <div id="transportadora-app-content" class="page-content hidden flex justify-center items-center">
+                                <div class="mobile-app-frame">
+                                    <!-- Screen 1: Main List -->
+                                    <div id="mobile-screen-1" class="mobile-app-screen bg-white p-4 flex flex-col">
+                                        <h2 class="text-xl font-bold text-center mb-4">Coletas do Dia</h2>
+                                        <div class="space-y-3 overflow-y-auto">
+                                            <div class="bg-gray-100 p-3 rounded-lg cursor-pointer" onclick="showMobileScreen(2)">
+                                                <p class="font-bold">Fornecedor Exemplo S.A.</p>
+                                                <p class="text-sm text-gray-600">Rua Fictícia, 123 - Contagem/MG</p>
+                                            </div>
+                                             <div class="bg-gray-100 p-3 rounded-lg"><p class="font-bold">Outro Fornecedor</p></div>
+                                        </div>
+                                    </div>
+                                    <!-- Screen 2: Scan QR -->
+                                    <div id="mobile-screen-2" class="mobile-app-screen hidden bg-white p-4 flex flex-col justify-between">
+                                        <div>
+                                            <a href="#" onclick="showMobileScreen(1)" class="text-blue-600">&lt; Voltar</a>
+                                            <h2 class="text-xl font-bold text-center my-4">Detalhes da Coleta</h2>
+                                            <p class="font-bold text-lg">Fornecedor Exemplo S.A.</p>
+                                            <p class="text-gray-600">Rua Fictícia, 123 - Contagem/MG</p>
+                                        </div>
+                                        <button onclick="showMobileScreen(3)" class="w-full bg-[#003366] text-white py-4 rounded-lg font-bold flex items-center justify-center"><i data-lucide="qr-code" class="h-6 w-6 mr-2"></i>Escanear QR Code da Carga</button>
+                                    </div>
+                                    <!-- Screen 3: Trip -->
+                                    <div id="mobile-screen-3" class="mobile-app-screen hidden bg-gray-800 text-white p-4 flex flex-col">
+                                        <div id="mobile-map-container" class="flex-1 bg-gray-700 rounded-lg">
+                                            <!-- Map will be initialized here -->
+                                        </div>
+                                        <button onclick="showMobileScreen(1)" class="w-full bg-[#00C853] text-white py-4 mt-4 rounded-lg font-bold">Finalizar Viagem</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            `,
+                iveco: `
+                <div class="flex h-screen bg-[#F5F7FA]">
+                    <nav class="w-64 bg-[#003366] text-white flex flex-col">
+                        <div class="p-6 text-center border-b border-blue-800">
+                            <h1 class="text-2xl font-bold">Plataforma ADCA</h1>
+                            <span class="text-sm text-gray-300">Perfil IVECO / Auditor</span>
+                        </div>
+                        <ul class="flex-1 mt-6">
+                            <li><a href="#" onclick="showContentPage('iveco-dashboard')" class="nav-link active flex items-center px-6 py-3 text-gray-300 hover:bg-blue-800 hover:text-white"><i data-lucide="globe-2" class="h-5 w-5 mr-3"></i>Dashboard Global</a></li>
+                            <li><a href="#" onclick="showContentPage('iveco-mre')" class="nav-link flex items-center px-6 py-3 text-gray-300 hover:bg-blue-800 hover:text-white"><i data-lucide="layout-grid" class="h-5 w-5 mr-3"></i>Matriz de Relevância</a></li>
+                            <li><a href="#" onclick="showContentPage('iveco-torre')" class="nav-link flex items-center px-6 py-3 text-gray-300 hover:bg-blue-800 hover:text-white"><i data-lucide="navigation" class="h-5 w-5 mr-3"></i>Torre de Controle</a></li>
+                        </ul>
+                        <div class="p-6 border-t border-blue-800"><a href="#" onclick="logout()" class="flex items-center w-full px-4 py-2 text-sm text-gray-300 rounded-lg hover:bg-red-700 hover:text-white"><i data-lucide="log-out" class="h-5 w-5 mr-3"></i>Sair</a></div>
+                    </nav>
+                    <main class="flex-1 flex flex-col overflow-hidden">
+                        <header class="flex justify-between items-center p-4 bg-white border-b">
+                            <h1 id="page-title" class="text-2xl font-bold text-gray-800">Dashboard Global</h1>
+                            <div class="flex items-center">
+                                <span class="text-right mr-4"><p class="font-semibold text-gray-700">Matheus (Admin)</p></span>
+                                <img src="https://placehold.co/40x40/D50000/FFFFFF?text=M" alt="Logo IVECO" class="h-10 w-10 rounded-full object-cover">
+                            </div>
+                        </header>
+                        <div class="flex-1 p-6 overflow-y-auto">
+                            <!-- IVECO DASHBOARD -->
+                            <div id="iveco-dashboard-content" class="page-content">
+                                <div class="grid grid-cols-3 gap-6 mb-6">
+                                    <div class="bg-white p-4 rounded-xl shadow-md"><h3 class="font-semibold text-gray-600">Pegada Total Escopo 3</h3><p class="text-2xl font-bold text-[#003366] mt-1">15.780 tCO₂e</p></div>
+                                    <div class="bg-white p-4 rounded-xl shadow-md"><h3 class="font-semibold text-gray-600">% Fornecedores Auditados</h3><p class="text-2xl font-bold text-[#003366] mt-1">85%</p></div>
+                                    <div class="bg-white p-4 rounded-xl shadow-md"><h3 class="font-semibold text-gray-600">Milk Runs no Mês</h3><p class="text-2xl font-bold text-[#003366] mt-1">42</p></div>
+                                </div>
+                                <div id="iveco-map-container" class="bg-white rounded-xl shadow-md h-96"></div>
+                            </div>
+                            <!-- IVECO MRE -->
+                            <div id="iveco-mre-content" class="page-content hidden">
+                                <div class="grid grid-cols-2 grid-rows-2 gap-4 h-[calc(100vh-150px)]">
+                                    <div class="bg-red-50 border-2 border-red-200 rounded-lg p-4 cursor-pointer hover:shadow-lg"><h3 class="font-bold text-red-800">Críticos</h3><p class="text-sm">Alto volume, baixa performance</p></div>
+                                    <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 cursor-pointer hover:shadow-lg"><h3 class="font-bold text-blue-800">Estratégicos</h3><p class="text-sm">Alto volume, alta performance</p></div>
+                                    <div class="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4 cursor-pointer hover:shadow-lg"><h3 class="font-bold text-yellow-800">Táticos</h3><p class="text-sm">Baixo volume, baixa performance</p></div>
+                                    <div class="bg-green-50 border-2 border-green-200 rounded-lg p-4 cursor-pointer hover:shadow-lg"><h3 class="font-bold text-green-800">Otimizados</h3><p class="text-sm">Baixo volume, alta performance</p></div>
+                                </div>
+                            </div>
+                            <!-- IVECO TORRE DE CONTROLE -->
+                            <div id="iveco-torre-content" class="page-content hidden">
+                                <div id="torre-map-container" class="rounded-xl shadow-md h-[calc(100vh-150px)]"></div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            `,
+            };
+            
+            // ==================================================
+            // APP LOGIC - Make all functions globally available
+            // ==================================================
+            let currentUserRole = null;
+            let ivecoMap, torreMap, mobileMap;
+
+            window.login = function() {
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const profile = document.querySelector('input[name="profile"]:checked').value;
+
+                if (profile === 'iveco' && email.toLowerCase() === 'matheusadm' && password === 'Admin') {
+                    currentUserRole = 'iveco';
+                } else {
+                    currentUserRole = profile;
+                }
+
+                document.getElementById('login-page').classList.add('hidden');
+                const mainApp = document.getElementById('main-app');
+                mainApp.innerHTML = templates[currentUserRole];
+                mainApp.classList.remove('hidden');
+                
+                showContentPage(`${currentUserRole}-dashboard`);
+                
+                setTimeout(() => {
+                    lucide.createIcons();
+                    if (currentUserRole === 'iveco') {
+                        initIvecoMap();
+                    }
+                }, 100);
+            }
+
+            window.logout = function() {
+                currentUserRole = null;
+                const mainApp = document.getElementById('main-app');
+                mainApp.classList.add('hidden');
+                mainApp.innerHTML = '';
+                document.getElementById('login-page').classList.remove('hidden');
+                lucide.createIcons();
+            }
+
+            window.showContentPage = function(pageId) {
+                document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+                const content = document.getElementById(`${pageId}-content`);
+                if (content) content.classList.remove('hidden');
+                
+                const titleMap = {
+                    'fornecedor-dashboard': 'Dashboard', 'fornecedor-reportar': 'Reportar Dados Mensais', 'fornecedor-logistica': 'Logística SYNAPSE',
+                    'transportadora-dashboard': 'Dashboard', 'transportadora-oportunidades': 'Ofertas de Frete', 'transportadora-app': 'App do Motorista',
+                    'iveco-dashboard': 'Dashboard Global', 'iveco-mre': 'Matriz de Relevância', 'iveco-torre': 'Torre de Controle'
+                };
+                document.getElementById('page-title').textContent = titleMap[pageId] || 'Dashboard';
+
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    link.classList.remove('active', 'bg-blue-900', 'font-semibold');
+                    if (link.getAttribute('onclick').includes(pageId)) {
+                        link.classList.add('active', 'bg-blue-900', 'font-semibold');
+                    }
+                });
+                
+                setTimeout(() => {
+                    if (pageId === 'iveco-dashboard' && !ivecoMap) initIvecoMap();
+                    if (pageId === 'iveco-torre' && !torreMap) initTorreMap();
+                    if (pageId === 'transportadora-app' && !mobileMap) initMobileMap();
+                     lucide.createIcons();
+                }, 100);
+            }
+
+            window.togglePassword = function() {
+                const passwordInput = document.getElementById('password');
+                const passwordIcon = document.getElementById('password-icon');
+                passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
+                passwordIcon.setAttribute('data-lucide', passwordInput.type === 'password' ? 'eye-off' : 'eye');
+                lucide.createIcons();
+            }
+
+            window.showMobileScreen = function(screenNumber) {
+                document.querySelectorAll('.mobile-app-screen').forEach(s => s.classList.add('hidden'));
+                document.getElementById(`mobile-screen-${screenNumber}`).classList.remove('hidden');
+                if(screenNumber === 3 && !mobileMap) {
+                    setTimeout(initMobileMap, 50);
+                }
+            }
+
+            window.goToStep = function(step) {
+                document.querySelectorAll('.wizard-step').forEach(s => s.classList.add('hidden'));
+                document.querySelector(`.wizard-step[data-step="${step}"]`).classList.remove('hidden');
+                
+                document.querySelectorAll('.step-item').forEach(s => {
+                    const stepNum = parseInt(s.dataset.step);
+                    s.classList.remove('active', 'completed');
+                    if (stepNum < step) s.classList.add('completed');
+                    else if (stepNum === step) s.classList.add('active');
+                });
+
+                if (step === 3) {
+                    const summary = document.getElementById('processing-summary');
+                    summary.classList.add('hidden');
+                    setTimeout(() => { summary.classList.remove('hidden'); }, 1500);
+                }
+            }
+            
+            // ==================================================
+            // MAP INITIALIZATION
+            // ==================================================
+            function initIvecoMap() {
+                const mapContainer = document.getElementById('iveco-map-container');
+                if (!mapContainer || ivecoMap) return;
+                ivecoMap = L.map(mapContainer).setView([-19.65, -44.15], 9);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(ivecoMap);
+                
+                L.marker([-19.96, -44.19]).addTo(ivecoMap).bindPopup('Fornecedor Crítico (Betim)');
+                L.marker([-19.93, -44.05]).addTo(ivecoMap).bindPopup('Fornecedor Estratégico (Contagem)');
+                L.marker([-19.46, -44.24]).addTo(ivecoMap).bindPopup('IVECO Sete Lagoas').openPopup();
+            }
+
+            function initTorreMap() {
+                const mapContainer = document.getElementById('torre-map-container');
+                if (!mapContainer || torreMap) return;
+                torreMap = L.map(mapContainer).setView([-19.7, -44.2], 10);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; <a href="https://carto.com/attributions">CARTO</a>'
+                }).addTo(torreMap);
+
+                L.marker([-19.95, -44.18], { icon: L.divIcon({ className: 'lucide-truck', html: '<i data-lucide="truck" class="text-yellow-400"></i>' }) }).addTo(torreMap).bindPopup('Caminhão A - ETA: 14:30');
+                L.marker([-19.80, -44.10], { icon: L.divIcon({ className: 'lucide-truck', html: '<i data-lucide="truck" class="text-cyan-400"></i>' }) }).addTo(torreMap).bindPopup('Caminhão B - ETA: 15:00');
+                lucide.createIcons();
+            }
+
+            function initMobileMap() {
+                const mapContainer = document.getElementById('mobile-map-container');
+                if (!mapContainer || mobileMap) return;
+                mobileMap = L.map(mapContainer).setView([-19.7, -44.15], 11);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mobileMap);
+                
+                const from = L.latLng(-19.93, -44.05); // Contagem
+                const to = L.latLng(-19.46, -44.24); // Sete Lagoas
+                L.polyline([from, to], {color: 'blue'}).addTo(mobileMap);
+                L.marker(from).addTo(mobileMap);
+                L.marker(to).addTo(mobileMap);
+            }
+
+            // ==================================================
+            // INITIALIZATION
+            // ==================================================
+            // This is the single entry point for the application.
+            // It's called by the `onload` attribute on the lucide script tag.
+            window.initializeApp = function() {
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                    document.getElementById('login-page').classList.remove('hidden');
+                    document.getElementById('main-app').classList.add('hidden');
+                } else {
+                    console.error("Lucide library failed to load.");
+                }
+            }
+    </script>
+</body>
+</html>
