@@ -15,6 +15,10 @@
     <!-- Babel para transpilar JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+    <!-- Leaflet.js (para o mapa) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -45,6 +49,21 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        /* Animação de pulsar para os caminhões */
+        @keyframes pulse-truck {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        .animate-pulse-truck {
+            animation: pulse-truck 2s infinite;
+        }
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+        }
+        .leaflet-popup-content {
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -52,7 +71,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
         // Paleta de Cores
         const colors = {
@@ -62,7 +81,7 @@
             action: '#00C853',
         };
 
-        // --- Ícones SVG (Substituindo lucide-react) ---
+        // --- Ícones SVG ---
         const Icon = ({ path, className = 'w-6 h-6' }) => (
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
                 <path d={path} />
@@ -85,7 +104,8 @@
             LogIn: "M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3",
             Filter: "M22 3H2l8 9.46V19l4 2v-8.54L22 3z",
             QrCode: "M3 3h4v4H3zM9 3h4v4H9zM15 3h4v4h-4zM3 9h4v4H3zM15 9h4v4h-4zM3 15h4v4H3zM9 15h4v4H9zM15 15h4v4h-4zM21 3v4M9 9h4v4H9zM21 9v4m0 6v2",
-            Search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.35-4.35"
+            Search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.35-4.35",
+            X: "M18 6L6 18M6 6l12 12"
         };
         
         // --- Componentes Reutilizáveis ---
@@ -172,8 +192,9 @@
                 <div className="min-h-screen flex flex-col justify-center items-center p-4">
                     <div className="w-full max-w-md mx-auto">
                         <div className="text-center mb-8">
-                            <img src="https://i.imgur.com/8a6Q4qK.png" alt="Logo ADCA" className="h-20 mx-auto mb-4" />
-                            <img src="https://i.imgur.com/W2C4p6f.png" alt="Logo IVECO" className="h-8 mx-auto" />
+                            <img src="logotipo.png" alt="Logo ADCA" class="h-20 mx-auto mb-4" />
+
+                            <img src="https://logodownload.org/wp-content/uploads/2017/08/iveco-logo-0-1.png" alt="Logo IVECO" className="h-8 mx-auto" />
                         </div>
                         <Card className="w-full">
                             <div className="p-4">
@@ -218,14 +239,14 @@
             const links = {
                 FORNECEDOR: ['Dashboard', 'Reportar Dados', 'Logística SYNAPSE'],
                 TRANSPORTADORA: ['Dashboard', 'Oportunidades', 'App do Motorista'],
-                IVECO: ['Dashboard', 'Matriz MRE', 'Torre de Controle'],
+                IVECO: ['Dashboard', 'Matriz MRE', 'Torre de Controle', 'Relatórios', 'Auditoria'],
             };
 
             return (
                 <div className="flex h-screen bg-gray-100">
                     <div className={`w-64 bg-[#003366] text-white flex flex-col`}>
-                        <div className="px-6 py-4 flex items-center justify-center border-b border-blue-700">
-                             <img src="https://i.imgur.com/8a6Q4qK.png" alt="Logo ADCA" className="h-16" />
+                        <div className="px-6 py-4 flex items-center justify-center border-b border-blue-700 h-20">
+                             <img src="https://i.imgur.com/ix1IECi.png" alt="Logo ADCA" className="h-16" />
                         </div>
                         <div className="px-6 py-4">
                             <div className="flex items-center">
@@ -285,6 +306,7 @@
             const [isProcessing, setIsProcessing] = useState(false);
             const [processingStatus, setProcessingStatus] = useState('');
             const [summary, setSummary] = useState(null);
+            const [isSubmitted, setIsSubmitted] = useState(false);
 
             const handleFileUpload = (type, file) => setFiles(prev => ({ ...prev, [type]: file }));
             
@@ -302,7 +324,7 @@
                         setSummary({ energia: '15.000 kWh', gas: '500 m³', producao: '12.000 unidades', emissoes: '15.000 kgCO₂e' });
                         setStep(3);
                     }
-                }, 1500);
+                }, 1000);
             };
 
             const DropZone = ({ type, label, acceptedFiles }) => (
@@ -313,6 +335,19 @@
                     <input type="file" className="hidden" onChange={(e) => handleFileUpload(type, e.target.files[0])} />
                 </div>
             );
+
+            if (isSubmitted) {
+                return (
+                    <Card>
+                        <div className="text-center p-6 animate-fade-in">
+                            <Icon path={icons.CheckCircle} className="mx-auto h-24 w-24 text-green-500 mb-4" />
+                            <h3 className="font-bold text-2xl mb-2">Relatório Enviado com Sucesso!</h3>
+                            <p className="text-gray-600 mb-6">O seu relatório foi recebido e será processado.</p>
+                            <Button onClick={() => { setStep(1); setIsSubmitted(false); setFiles({}); setSummary(null); }}>Enviar Novo Relatório</Button>
+                        </div>
+                    </Card>
+                );
+            }
 
             return (
                 <Card>
@@ -347,7 +382,7 @@
                                 </div>
                                 <div className="flex justify-between mt-6">
                                     <Button onClick={() => setStep(1)} variant="outline">Voltar</Button>
-                                    <Button onClick={processFiles} disabled={Object.keys(files).length < 3}>Validar e Calcular</Button>
+                                    <Button onClick={processFiles}>Validar e Calcular</Button>
                                 </div>
                             </div>
                         )}
@@ -371,7 +406,7 @@
                                             </div>
                                             <div className="flex justify-between mt-6">
                                                 <Button onClick={() => setStep(2)} variant="outline">Corrigir</Button>
-                                                <Button onClick={() => alert('Dados enviados!')}>Confirmar Envio</Button>
+                                                <Button onClick={() => setIsSubmitted(true)}>Confirmar Envio</Button>
                                             </div>
                                         </React.Fragment>
                                     )
@@ -460,10 +495,15 @@
         );
 
         const OportunidadesFrete = () => {
-             const fretes = [
-                { type: 'Milk Run', origin: 'Betim, MG', destinations: 3, weight: '4.5t', value: 'R$ 2.800,00' },
-                { type: 'Frete Direto', origin: 'Contagem, MG', destinations: 1, weight: '12t', value: 'R$ 1.900,00' },
-            ];
+            const [fretes, setFretes] = useState([
+                { id: 1, type: 'Milk Run', origin: 'Betim, MG', destinations: 3, weight: '4.5t', value: 'R$ 2.800,00', accepted: false },
+                { id: 2, type: 'Frete Direto', origin: 'Contagem, MG', destinations: 1, weight: '12t', value: 'R$ 1.900,00', accepted: false },
+            ]);
+
+            const handleAccept = (id) => {
+                setFretes(fretes.map(f => f.id === id ? { ...f, accepted: true } : f));
+            };
+
             return (
                 <div>
                     <div className="flex justify-between items-center mb-4">
@@ -474,8 +514,8 @@
                         <Button variant="outline" iconPath={icons.Filter}>Filtros</Button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {fretes.map((frete, index) => (
-                            <Card key={index}>
+                        {fretes.map((frete) => (
+                            <Card key={frete.id}>
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${frete.type === 'Milk Run' ? 'bg-purple-100 text-purple-800' : 'bg-orange-100 text-orange-800'}`}>{frete.type}</span>
@@ -485,7 +525,10 @@
                                     <div className="text-right"><p className="font-bold text-lg">{frete.weight}</p><p className="text-gray-500">Peso total</p></div>
                                 </div>
                                 <div className="flex justify-between items-center mt-6 border-t pt-4">
-                                    <p className="text-2xl font-bold text-gray-800">{frete.value}</p><Button>Aceitar Viagem</Button>
+                                    <p className="text-2xl font-bold text-gray-800">{frete.value}</p>
+                                    <Button onClick={() => handleAccept(frete.id)} disabled={frete.accepted} iconPath={frete.accepted ? icons.CheckCircle : null}>
+                                        {frete.accepted ? 'Viagem Aceita' : 'Aceitar Viagem'}
+                                    </Button>
                                 </div>
                             </Card>
                         ))}
@@ -539,7 +582,12 @@
                                     <a href="#" onClick={(e) => {e.preventDefault(); setScreen(2)}} className="text-blue-600 mb-2 block">&larr; Voltar</a>
                                     <h2 className="font-bold text-xl mb-4">Navegação</h2>
                                     <div className="flex-1 bg-gray-200 rounded-lg overflow-hidden">
-                                        <img src="https://placehold.co/360x600/e2e8f0/4a5568?text=Mapa+de+Navega%C3%A7%C3%A3o" alt="Mapa" className="w-full h-full object-cover" />
+                                        <iframe 
+                                            className="w-full h-full border-0"
+                                            loading="lazy"
+                                            allowFullScreen
+                                            src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d961237.5915359273!2d-44.686568!3d-19.775392!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e6!4m5!1s0xa690cac2565399%3A0x665b7654401a6b53!2sBelo%20Horizonte%2C%20MG!3m2!1d-19.916667!2d-43.933333!4m5!1s0xa03154ff33a59d%3A0x6e0d3536d54a275e!2sSete%20Lagoas%2C%20MG!3m2!1d-19.466667!2d-44.25!5e0!3m2!1spt-BR!2sbr!4v1693309858882!5m2!1spt-BR!2sbr">
+                                        </iframe>
                                     </div>
                                 </div>
                             )}
@@ -580,13 +628,17 @@
                     <div className="w-full lg:w-2/3">
                         <Card>
                             <h3 className="font-bold text-xl mb-4">Matriz de Relevância de Emissões (MRE)</h3>
-                            <div className="relative aspect-square">
-                                <div className="absolute top-0 left-0 w-full h-full grid grid-cols-2 grid-rows-2 gap-2">
-                                    <Quadrant title="Alavancagem" bgColor="bg-blue-400" /><Quadrant title="Críticos" bgColor="bg-red-500" />
-                                    <Quadrant title="Estratégicos" bgColor="bg-green-500" /><Quadrant title="Rotineiros" bgColor="bg-gray-400" />
+                            <div className="relative w-full pt-[100%]"> {/* Aspect ratio container */}
+                                <div className="absolute inset-0 flex flex-col p-8">
+                                    <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-2">
+                                        <Quadrant title="Alavancagem" bgColor="bg-blue-400" /><Quadrant title="Críticos" bgColor="bg-red-500" />
+                                        <Quadrant title="Estratégicos" bgColor="bg-green-500" /><Quadrant title="Rotineiros" bgColor="bg-gray-400" />
+                                    </div>
                                 </div>
-                                <div className="absolute -bottom-8 left-0 w-full text-center font-semibold text-gray-600">Risco na Cadeia de Suprimentos &rarr;</div>
-                                <div className="absolute -left-12 top-0 h-full flex items-center transform -rotate-90 font-semibold text-gray-600">Volume de Emissões &rarr;</div>
+                                 <div className="absolute bottom-0 left-0 w-full text-center font-semibold text-gray-600 pb-2">Risco na Cadeia de Suprimentos &rarr;</div>
+                                <div className="absolute top-0 left-0 h-full flex items-center transform -translate-x-full pl-2">
+                                    <span className="transform -rotate-90 whitespace-nowrap font-semibold text-gray-600">Volume de Emissões &rarr;</span>
+                                </div>
                             </div>
                         </Card>
                     </div>
@@ -610,24 +662,187 @@
         };
 
         const TorreDeControle = () => {
-            const trucks = [
-                { top: '60%', left: '55%', colorClass: 'bg-blue-600', text: 'SP &rarr; SLG | ETA: 14:30', pulse: false },
-                { top: '50%', left: '45%', colorClass: 'bg-red-600', text: 'RJ &rarr; SLG | Atrasado!', pulse: true },
-                { top: '65%', left: '40%', colorClass: 'bg-blue-600', text: 'PR &rarr; SLG | ETA: 18:00', pulse: false }
-            ];
+            const mapRef = useRef(null);
+
+            useEffect(() => {
+                if (window.L && mapRef.current && !mapRef.current.leafletMap) {
+                    const map = L.map(mapRef.current, {
+                        center: [-21.5, -47.5],
+                        zoom: 6,
+                        scrollWheelZoom: false,
+                    });
+                    
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    }).addTo(map);
+
+                    const trucks = [
+                        { lat: -23.55, lng: -46.63, color: '#2563EB', text: 'SP &rarr; SLG | ETA: 14:30' },
+                        { lat: -22.90, lng: -43.17, color: '#DC2626', text: 'RJ &rarr; SLG | Atrasado!' },
+                        { lat: -25.42, lng: -49.27, color: '#2563EB', text: 'PR &rarr; SLG | ETA: 18:00' }
+                    ];
+
+                    trucks.forEach(truck => {
+                        const iconHtml = `<div style="background-color: ${truck.color};" class="p-1 rounded-full shadow-lg"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="${icons.Truck}"/></svg></div>`;
+                        const customIcon = L.divIcon({
+                            html: iconHtml,
+                            className: '',
+                            iconSize: [32, 32],
+                            iconAnchor: [16, 16]
+                        });
+
+                        L.marker([truck.lat, truck.lng], { icon: customIcon })
+                            .addTo(map)
+                            .bindPopup(truck.text);
+                    });
+
+                    mapRef.current.leafletMap = map; // Evita reinicialização
+                }
+            }, []);
 
             return (
                 <div className="h-full w-full bg-white rounded-lg shadow-md overflow-hidden relative">
-                    <img src="https://placehold.co/1280x720/dbeafe/1e3a8a?text=Mapa+Torre+de+Controle" alt="Mapa" className="w-full h-full object-cover" />
-                    {/* Tailwind JIT Hint: bg-blue-600 bg-red-600 */}
-                    {trucks.map((truck, i) => (
-                        <div key={i} className="group absolute" style={{ top: truck.top, left: truck.left }}>
-                            <div className={`text-white ${truck.colorClass} p-1 rounded-full h-8 w-8 shadow-lg cursor-pointer ${truck.pulse ? 'animate-pulse' : ''}`}>
-                                <Icon path={icons.Truck} className="w-full h-full"/>
-                            </div>
-                            <div className="invisible group-hover:visible w-40 bg-gray-800 text-white text-center rounded-md py-1 px-2 absolute z-10 bottom-full left-1/2 -translate-x-1/2 transition-opacity duration-300 opacity-0 group-hover:opacity-100">{truck.text}</div>
+                    <div ref={mapRef} className="h-full w-full"></div>
+                </div>
+            );
+        };
+
+        const RelatorioModal = ({ relatorio, onClose }) => {
+            if (!relatorio) return null;
+             const [activeTab, setActiveTab] = useState('mensal');
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 animate-fade-in">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl p-6 relative">
+                        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800">
+                            <Icon path={icons.X} className="w-6 h-6" />
+                        </button>
+                        <h2 className="text-2xl font-bold mb-2 text-[#003366]">Relatório de Auditoria: {relatorio.nome}</h2>
+                        <p className="text-gray-500 mb-4"><strong>Status:</strong> <span className={`px-2 py-1 text-xs font-semibold rounded-full ${relatorio.statusColor}`}>{relatorio.status}</span></p>
+                        
+                        <div className="border-b border-gray-200">
+                            <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                                <button onClick={() => setActiveTab('mensal')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'mensal' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                                    Relatório Mensal
+                                </button>
+                                <button onClick={() => setActiveTab('anual')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'anual' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                                    Comparativo Anual
+                                </button>
+                            </nav>
                         </div>
-                    ))}
+
+                        <div className="py-6">
+                            {activeTab === 'mensal' && (
+                                <div className="space-y-4 animate-fade-in">
+                                    <Card>
+                                        <h3 className="font-bold text-lg">Resumo de Emissões (Julho/2025)</h3>
+                                        <p><strong>Total:</strong> 1.500 kgCO₂e</p>
+                                        <p><strong>Por Unidade Produzida:</strong> 1.25 kgCO₂e/un.</p>
+                                    </Card>
+                                    <Card>
+                                        <h3 className="font-bold text-lg">Consumo de Recursos</h3>
+                                        <p><strong>Energia Elétrica:</strong> 15.000 kWh</p>
+                                        <p><strong>Gás Natural:</strong> 500 m³</p>
+                                    </Card>
+                                </div>
+                            )}
+                            {activeTab === 'anual' && (
+                                <div className="space-y-4 animate-fade-in">
+                                    <Card>
+                                        <h3 className="font-bold text-lg">Evolução Anual de Emissões (kgCO₂e)</h3>
+                                        <div className="h-40 bg-gray-100 rounded-md flex items-end justify-around p-2 mt-2">
+                                            <div className="w-8 bg-blue-300" style={{height: '50%'}}></div>
+                                            <div className="w-8 bg-blue-400" style={{height: '70%'}}></div>
+                                            <div className="w-8 bg-blue-500" style={{height: '60%'}}></div>
+                                        </div>
+                                    </Card>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const IvecoRelatorios = () => {
+            const [selectedReport, setSelectedReport] = useState(null);
+            const statusColors = { 'Em Conformidade': 'bg-green-100 text-green-800', 'Pendente': 'bg-yellow-100 text-yellow-800', 'Atrasado': 'bg-red-100 text-red-800' };
+            const relatorios = [
+                { nome: 'Fornecedor Alfa', status: 'Em Conformidade', data: '25/07/2025', statusColor: statusColors['Em Conformidade'] },
+                { nome: 'Transportadora Beta', status: 'Pendente', data: '24/07/2025', statusColor: statusColors['Pendente'] },
+                { nome: 'Fornecedor Gama', status: 'Em Conformidade', data: '23/07/2025', statusColor: statusColors['Em Conformidade'] },
+                { nome: 'Fornecedor Delta', status: 'Atrasado', data: '22/07/2025', statusColor: statusColors['Atrasado'] },
+            ];
+            
+            return (
+                <React.Fragment>
+                    <Card>
+                        <h3 className="font-bold text-xl mb-4">Relatórios de Auditoria</h3>
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="bg-gray-100">
+                                    <th className="p-3">Cliente</th>
+                                    <th className="p-3">Status do Último Relatório</th>
+                                    <th className="p-3">Data</th>
+                                    <th className="p-3">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {relatorios.map(item => (
+                                    <tr key={item.nome} className="border-b hover:bg-gray-50">
+                                        <td className="p-3 font-semibold">{item.nome}</td>
+                                        <td className="p-3">
+                                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${item.statusColor}`}>{item.status}</span>
+                                        </td>
+                                        <td className="p-3">{item.data}</td>
+                                        <td className="p-3">
+                                            <Button onClick={() => setSelectedReport(item)} variant="outline" className="py-1 px-3 text-sm">Ver Detalhes</Button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </Card>
+                    <RelatorioModal relatorio={selectedReport} onClose={() => setSelectedReport(null)} />
+                </React.Fragment>
+            );
+        };
+
+        const IvecoAuditoria = () => {
+            const [selectedSupplier, setSelectedSupplier] = useState('');
+            const suppliers = ['Fornecedor Alfa', 'Transportadora Beta', 'Fornecedor Gama'];
+
+            return (
+                 <div className="space-y-6">
+                    <Card>
+                        <h3 className="font-bold text-xl mb-4">Painel de Auditoria</h3>
+                        <select onChange={(e) => setSelectedSupplier(e.target.value)} className="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Selecione um Fornecedor para Auditar...</option>
+                            {suppliers.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                    </Card>
+
+                    {selectedSupplier && (
+                        <Card className="animate-fade-in">
+                            <h3 className="font-bold text-xl mb-4">Auditoria de: {selectedSupplier}</h3>
+                            <div className="space-y-4">
+                                <Card>
+                                    <h3 className="font-bold text-lg">Dados do Último Relatório</h3>
+                                    <p><strong>Energia Elétrica:</strong> 15.000 kWh</p>
+                                    <p><strong>Gás Natural:</strong> 500 m³</p>
+                                    <p><strong>Emissões Totais:</strong> 1.500 kgCO₂e</p>
+                                </Card>
+                                <Card>
+                                    <h3 className="font-bold text-lg">Notas do Auditor</h3>
+                                    <textarea className="shadow border rounded w-full py-2 px-3 text-gray-700 mt-2 focus:outline-none focus:ring-2 focus:ring-blue-500" rows="4" placeholder="Adicione as suas notas e observações aqui..."></textarea>
+                                </Card>
+                                <div className="flex justify-end space-x-4">
+                                    <Button variant="outline" className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white">Rejeitar com Pendência</Button>
+                                    <Button>Aprovar Relatório</Button>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
                 </div>
             );
         };
@@ -635,6 +850,8 @@
         const IvecoView = ({ activePage }) => {
             if (activePage === 'Matriz MRE') return <MatrizMRE />;
             if (activePage === 'Torre de Controle') return <TorreDeControle />;
+            if (activePage === 'Relatórios') return <IvecoRelatorios />;
+            if (activePage === 'Auditoria') return <IvecoAuditoria />;
             return <IvecoDashboard />;
         };
 
