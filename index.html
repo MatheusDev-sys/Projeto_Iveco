@@ -1,792 +1,666 @@
-import React, { useState, useEffect } from 'react';
-import { FileUp, Truck, Building, User, ChevronRight, CheckCircle, AlertTriangle, Clock, MapPin, QrCode, Search, Filter, ArrowRight, Printer, Package, History, ScanLine, Navigation, BarChart2, Shield, LogIn } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma ADCA</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React -->
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    
+    <!-- Babel para transpilar JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-// Paleta de Cores, conforme especificado no prompt
-const colors = {
-  primary: '#003366', // Azul-marinho IVECO
-  neutralBg: '#F5F7FA', // Cinza-claro
-  white: '#FFFFFF',
-  action: '#00C853', // Verde-esmeralda
-  textPrimary: '#1a202c',
-  textSecondary: '#718096',
-  alert: '#f56565',
-};
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-// --- Componentes Reutilizáveis ---
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Animação do loader */
+        .loader {
+            border-top-color: #003366;
+            -webkit-animation: spinner 1.5s linear infinite;
+            animation: spinner 1.5s linear infinite;
+        }
+        @-webkit-keyframes spinner {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Animação de fade-in */
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
 
-const Card = ({ children, className = '' }) => (
-  <div className={`bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg ${className}`}>
-    {children}
-  </div>
-);
+    <div id="root"></div>
 
-const Button = ({ children, onClick, variant = 'primary', className = '', icon: Icon }) => {
-  const baseClasses = 'flex items-center justify-center font-bold py-2 px-4 rounded-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2';
-  const styles = {
-    primary: `bg-[${colors.action}] text-white hover:bg-green-600 focus:ring-green-500`,
-    secondary: `bg-[${colors.primary}] text-white hover:bg-blue-800 focus:ring-blue-500`,
-    outline: `bg-transparent border-2 border-[${colors.primary}] text-[${colors.primary}] hover:bg-[${colors.primary}] hover:text-white focus:ring-blue-500`,
-  };
-  return (
-    <button onClick={onClick} className={`${baseClasses} ${styles[variant]} ${className}`}>
-      {Icon && <Icon className="mr-2 h-5 w-5" />}
-      {children}
-    </button>
-  );
-};
+    <script type="text/babel">
+        const { useState, useEffect } = React;
 
-const ProfileSelector = ({ selectedProfile, onSelectProfile }) => {
-    const profiles = [
-        { id: 'FORNECEDOR', name: 'Fornecedor', icon: Building },
-        { id: 'TRANSPORTADORA', name: 'Transportadora', icon: Truck },
-        { id: 'IVECO', name: 'IVECO / Auditor', icon: User },
-    ];
-
-    return (
-        <div className="w-full">
-            <h3 className="text-center text-gray-600 font-semibold mb-4">Acessar como:</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {profiles.map(profile => (
-                    <button
-                        key={profile.id}
-                        onClick={() => onSelectProfile(profile.id)}
-                        className={`p-4 border-2 rounded-lg flex flex-col items-center justify-center transition-all duration-200 ${selectedProfile === profile.id ? `border-[${colors.primary}] bg-blue-50 shadow-lg scale-105` : 'border-gray-300 hover:border-gray-400'}`}
-                    >
-                        <profile.icon className={`h-8 w-8 mb-2 ${selectedProfile === profile.id ? `text-[${colors.primary}]` : 'text-gray-500'}`} />
-                        <span className={`font-bold ${selectedProfile === profile.id ? `text-[${colors.primary}]` : 'text-gray-700'}`}>{profile.name}</span>
-                    </button>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-
-// --- Tela de Login ---
-const LoginPage = ({ onLogin }) => {
-  const [profile, setProfile] = useState(null);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-
-  const handleLogin = () => {
-    if (!profile) {
-      setError('Por favor, selecione um perfil para continuar.');
-      return;
-    }
-    // Lógica de login simulada
-    if (profile === 'IVECO' && email === 'Matheusadm' && password === 'Admin') {
-      onLogin(profile);
-    } else if (profile && email && password) {
-      onLogin(profile);
-    } else {
-      setError('E-mail ou senha inválidos para o perfil selecionado.');
-    }
-  };
-  
-  // Preenche os campos para o perfil IVECO para facilitar o teste
-  useEffect(() => {
-    if (profile === 'IVECO') {
-      setEmail('Matheusadm');
-      setPassword('Admin');
-    } else {
-      setEmail('');
-      setPassword('');
-    }
-    setError('');
-  }, [profile]);
-
-  return (
-    <div className="min-h-screen bg-gray-100 flex flex-col justify-center items-center p-4 font-sans">
-        <div className="w-full max-w-md mx-auto">
-            <div className="text-center mb-8">
-                <img src="https://placehold.co/250x100/ffffff/003366?text=ADCA&font=inter" alt="Logo ADCA" className="h-20 mx-auto mb-4" />
-                <img src="https://placehold.co/150x50/ffffff/003366?text=IVECO&font=inter" alt="Logo IVECO" className="h-8 mx-auto" />
-            </div>
-
-            <Card className="w-full">
-                <div className="p-4">
-                    <ProfileSelector selectedProfile={profile} onSelectProfile={setProfile} />
-                    
-                    {profile && (
-                        <div className="mt-6 animate-fade-in">
-                            <div className="mb-4">
-                                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
-                                    E-mail Corporativo
-                                </label>
-                                <input
-                                    id="email"
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="seu.email@empresa.com"
-                                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
-                            <div className="mb-6">
-                                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
-                                    Senha
-                                </label>
-                                <input
-                                    id="password"
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="******************"
-                                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                                <p className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">Esqueceu a senha?</p>
-                            </div>
-                            {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
-                            <Button onClick={handleLogin} variant="secondary" className="w-full" icon={LogIn}>
-                                Entrar
-                            </Button>
-                        </div>
-                    )}
-
-                    <div className="mt-8 text-center">
-                        <div className="flex items-center justify-center text-gray-500">
-                            <Shield className="h-5 w-5 mr-2 text-green-500" />
-                            <span className="text-sm font-semibold">Ambiente Seguro. Criptografia de Ponta a Ponta.</span>
-                        </div>
-                         <p className="text-xs text-gray-400 mt-2">Autenticação de Dois Fatores (2FA) será solicitada.</p>
-                    </div>
-                </div>
-            </Card>
-        </div>
-    </div>
-  );
-};
-
-
-// --- Layout Principal da Aplicação ---
-const AppLayout = ({ userProfile, onLogout, children }) => {
-    const profileConfig = {
-        FORNECEDOR: { name: 'Fornecedor', icon: Building },
-        TRANSPORTADORA: { name: 'Transportadora', icon: Truck },
-        IVECO: { name: 'IVECO / Auditor', icon: User },
-    };
-
-    const [activePage, setActivePage] = useState('Dashboard');
-
-    const renderNavLinks = () => {
-        const links = {
-            FORNECEDOR: ['Dashboard', 'Reportar Dados', 'Logística SYNAPSE'],
-            TRANSPORTADORA: ['Dashboard', 'Oportunidades', 'App do Motorista'],
-            IVECO: ['Dashboard', 'Matriz MRE', 'Torre de Controle'],
+        // Paleta de Cores
+        const colors = {
+            primary: '#003366',
+            neutralBg: '#F5F7FA',
+            white: '#FFFFFF',
+            action: '#00C853',
         };
 
-        return links[userProfile].map(link => (
-            <a
-                key={link}
-                href="#"
-                onClick={(e) => { e.preventDefault(); setActivePage(link); }}
-                className={`block py-2.5 px-4 rounded transition duration-200 ${activePage === link ? 'bg-blue-700 text-white' : 'text-gray-300 hover:bg-blue-700 hover:text-white'}`}
-            >
-                {link}
-            </a>
-        ));
-    };
-
-    return (
-        <div className="flex h-screen bg-gray-100 font-sans">
-            {/* Sidebar */}
-            <div className={`w-64 bg-[${colors.primary}] text-white flex flex-col`}>
-                <div className="px-6 py-4 flex items-center justify-center border-b border-blue-700">
-                    <img src="https://placehold.co/250x100/003366/FFFFFF?text=ADCA&font=inter" alt="Logo ADCA" className="h-16" />
-                </div>
-                <div className="px-6 py-4">
-                    <div className="flex items-center">
-                        {React.createElement(profileConfig[userProfile].icon, { className: "h-8 w-8 mr-3" })}
-                        <div>
-                            <p className="font-bold text-lg">{profileConfig[userProfile].name}</p>
-                            <p className="text-xs text-gray-400">empresa_exemplo@email.com</p>
-                        </div>
-                    </div>
-                </div>
-                <nav className="flex-1 px-4 py-2 space-y-2">
-                    {renderNavLinks()}
-                </nav>
-                <div className="px-4 py-4 border-t border-blue-700">
-                    <Button onClick={onLogout} variant="outline" className="w-full border-gray-400 text-gray-300 hover:bg-blue-700 hover:text-white">
-                        Sair
-                    </Button>
-                </div>
+        // --- Ícones SVG (Substituindo lucide-react) ---
+        const Icon = ({ path, className = 'w-6 h-6' }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d={path} />
+            </svg>
+        );
+        const icons = {
+            FileUp: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5-5 5 5M12 15V5",
+            Truck: "M10 17h4V5H2v12h3M2 17s-1 0-1-1 1-4 4-4 5 2 5 2m-4 2h4m-4 0v2m4 0v2m4-14l4 4v10h-4V5zM22 17h-2v-5l-2-2",
+            Building: "M16 18h4M18 10V4H6v14h12v-6M10 18v-4m-4 4v-2m8 2v-6",
+            User: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+            CheckCircle: "M22 11.08V12a10 10 0 1 1-5.93-9.14M9 11l3 3L22 4",
+            AlertTriangle: "M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4m0 4h.01",
+            ArrowRight: "M5 12h14m-7-7l7 7-7 7",
+            Printer: "M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z",
+            Package: "M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.27 6.96L12 12.01l8.73-5.05M12 22.08V12",
+            ScanLine: "M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10",
+            Navigation: "M3 11l19-9-9 19-2-8-8-2z",
+            BarChart2: "M18 20V10m-6 10V4M6 20v-6",
+            Shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+            LogIn: "M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3",
+            Filter: "M22 3H2l8 9.46V19l4 2v-8.54L22 3z",
+            QrCode: "M3 3h4v4H3zM9 3h4v4H9zM15 3h4v4h-4zM3 9h4v4H3zM15 9h4v4h-4zM3 15h4v4H3zM9 15h4v4H9zM15 15h4v4h-4zM21 3v4M9 9h4v4H9zM21 9v4m0 6v2",
+            Search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.35-4.35"
+        };
+        
+        // --- Componentes Reutilizáveis ---
+        const Card = ({ children, className = '' }) => (
+            <div className={`bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg ${className}`}>
+                {children}
             </div>
+        );
 
-            {/* Conteúdo Principal */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <header className="bg-white shadow-sm p-4 flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-gray-800">{activePage}</h1>
-                    {/* Pode adicionar outros elementos de header aqui */}
-                </header>
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-200 p-6">
-                    {React.cloneElement(children, { activePage })}
-                </main>
-            </div>
-        </div>
-    );
-};
+        const Button = ({ children, onClick, variant = 'primary', className = '', iconPath, disabled = false }) => {
+            const baseClasses = 'flex items-center justify-center font-bold py-2 px-4 rounded-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
+            const styles = {
+                primary: `bg-[#00C853] text-white hover:bg-green-600 focus:ring-green-500`,
+                secondary: `bg-[#003366] text-white hover:bg-blue-800 focus:ring-blue-500`,
+                outline: `bg-transparent border-2 border-[#003366] text-[#003366] hover:bg-[#003366] hover:text-white focus:ring-blue-500`,
+            };
+            return (
+                <button onClick={onClick} className={`${baseClasses} ${styles[variant]} ${className}`} disabled={disabled}>
+                    {iconPath && <Icon path={iconPath} className="mr-2 h-5 w-5" />}
+                    {children}
+                </button>
+            );
+        };
 
+        const ProfileSelector = ({ selectedProfile, onSelectProfile }) => {
+            const profiles = [
+                { id: 'FORNECEDOR', name: 'Fornecedor', iconPath: icons.Building },
+                { id: 'TRANSPORTADORA', name: 'Transportadora', iconPath: icons.Truck },
+                { id: 'IVECO', name: 'IVECO / Auditor', iconPath: icons.User },
+            ];
 
-// --- Jornada do Fornecedor ---
-
-const FornecedorDashboard = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card>
-            <h3 className="font-bold text-lg text-gray-700 flex items-center"><CheckCircle className="mr-2 text-green-500" /> Status do Reporte Mensal</h3>
-            <p className="text-3xl font-bold text-green-600 mt-4">Enviado</p>
-            <p className="text-gray-500 text-sm">Reporte de Julho/2025 concluído.</p>
-        </Card>
-        <Card>
-            <h3 className="font-bold text-lg text-gray-700 flex items-center"><BarChart2 className="mr-2 text-blue-500" /> Performance de Emissões</h3>
-            <p className="text-3xl font-bold text-gray-800 mt-4">1.25 kgCO₂e/un.</p>
-            <p className="text-gray-500 text-sm text-green-600">↓ 5% em relação ao mês anterior</p>
-        </Card>
-        <Card className="bg-yellow-50 border-yellow-400 border">
-            <h3 className="font-bold text-lg text-gray-700 flex items-center"><AlertTriangle className="mr-2 text-yellow-500" /> Alertas e Ações Necessárias</h3>
-            <p className="text-gray-800 mt-4">Nenhuma ação necessária no momento.</p>
-            <p className="text-gray-500 text-sm">Tudo em conformidade.</p>
-        </Card>
-    </div>
-);
-
-const ReportarDadosWizard = () => {
-    const [step, setStep] = useState(1);
-    const [files, setFiles] = useState({});
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [processingStatus, setProcessingStatus] = useState('');
-    const [summary, setSummary] = useState(null);
-
-    const handleFileUpload = (type, file) => {
-        setFiles(prev => ({ ...prev, [type]: file }));
-    };
-    
-    const processFiles = () => {
-        setIsProcessing(true);
-        setSummary(null);
-        const statuses = [
-            "Lendo documentos com OCR...",
-            "Validando dados...",
-            "Cruzando informações com relatório de produção...",
-            "Calculando emissões (GHG Protocol)...",
-            "Finalizando..."
-        ];
-        let currentStatusIndex = 0;
-
-        const interval = setInterval(() => {
-            if (currentStatusIndex < statuses.length) {
-                setProcessingStatus(statuses[currentStatusIndex]);
-                currentStatusIndex++;
-            } else {
-                clearInterval(interval);
-                setIsProcessing(false);
-                setSummary({
-                    energia: '15.000 kWh',
-                    gas: '500 m³',
-                    producao: '12.000 unidades',
-                    emissoes: '15.000 kgCO₂e'
-                });
-                setStep(3);
-            }
-        }, 1500);
-    };
-
-    const DropZone = ({ type, label, acceptedFiles }) => (
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 bg-gray-50">
-            <FileUp className="mx-auto h-12 w-12 text-gray-400" />
-            <p className="mt-2 text-sm text-gray-600">
-                {files[type] ? files[type].name : `Arraste e solte ou clique para carregar`}
-            </p>
-            <p className="text-xs text-gray-500">{label} ({acceptedFiles})</p>
-            <input type="file" className="hidden" onChange={(e) => handleFileUpload(type, e.target.files[0])} />
-        </div>
-    );
-
-    return (
-        <Card>
-            <div className="p-4">
-                {/* Stepper */}
-                <div className="flex justify-between items-center mb-8">
-                    <div className="flex items-center">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? `bg-[${colors.primary}] text-white` : 'bg-gray-300'}`}>1</div>
-                        <p className={`ml-2 font-semibold ${step >= 1 ? `text-[${colors.primary}]` : 'text-gray-500'}`}>Período</p>
-                    </div>
-                    <div className={`flex-1 h-1 mx-4 ${step >= 2 ? `bg-[${colors.primary}]` : 'bg-gray-300'}`}></div>
-                    <div className="flex items-center">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? `bg-[${colors.primary}] text-white` : 'bg-gray-300'}`}>2</div>
-                        <p className={`ml-2 font-semibold ${step >= 2 ? `text-[${colors.primary}]` : 'text-gray-500'}`}>Upload</p>
-                    </div>
-                    <div className={`flex-1 h-1 mx-4 ${step >= 3 ? `bg-[${colors.primary}]` : 'bg-gray-300'}`}></div>
-                    <div className="flex items-center">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 3 ? `bg-[${colors.primary}] text-white` : 'bg-gray-300'}`}>3</div>
-                        <p className={`ml-2 font-semibold ${step >= 3 ? `text-[${colors.primary}]` : 'text-gray-500'}`}>Validação</p>
+            return (
+                <div className="w-full">
+                    <h3 className="text-center text-gray-600 font-semibold mb-4">Acessar como:</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {profiles.map(profile => (
+                            <button
+                                key={profile.id}
+                                onClick={() => onSelectProfile(profile.id)}
+                                className={`p-4 border-2 rounded-lg flex flex-col items-center justify-center transition-all duration-200 ${selectedProfile === profile.id ? `border-[#003366] bg-blue-50 shadow-lg scale-105` : 'border-gray-300 hover:border-gray-400'}`}
+                            >
+                                <Icon path={profile.iconPath} className={`h-8 w-8 mb-2 ${selectedProfile === profile.id ? `text-[#003366]` : 'text-gray-500'}`} />
+                                <span className={`font-bold ${selectedProfile === profile.id ? `text-[#003366]` : 'text-gray-700'}`}>{profile.name}</span>
+                            </button>
+                        ))}
                     </div>
                 </div>
+            );
+        };
 
-                {/* Conteúdo do Passo */}
-                {step === 1 && (
-                    <div className="animate-fade-in">
-                        <h3 className="font-bold text-xl mb-4">Selecione o Período de Reporte</h3>
-                        <select className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option>Julho / 2025</option>
-                            <option>Junho / 2025</option>
-                            <option>Maio / 2025</option>
-                        </select>
-                        <div className="text-right mt-6">
-                            <Button onClick={() => setStep(2)} icon={ArrowRight}>Próximo</Button>
+        // --- Tela de Login ---
+        const LoginPage = ({ onLogin }) => {
+            const [profile, setProfile] = useState(null);
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+
+            const handleLogin = () => {
+                if (!profile) {
+                    setError('Por favor, selecione um perfil para continuar.');
+                    return;
+                }
+                if (profile === 'IVECO' && email === 'Matheusadm' && password === 'Admin') {
+                    onLogin(profile);
+                } else if (profile && email && password) {
+                    onLogin(profile);
+                } else {
+                    setError('E-mail ou senha inválidos para o perfil selecionado.');
+                }
+            };
+            
+            useEffect(() => {
+                if (profile === 'IVECO') {
+                    setEmail('Matheusadm');
+                    setPassword('Admin');
+                } else {
+                    setEmail('');
+                    setPassword('');
+                }
+                setError('');
+            }, [profile]);
+
+            return (
+                <div className="min-h-screen flex flex-col justify-center items-center p-4">
+                    <div className="w-full max-w-md mx-auto">
+                        <div className="text-center mb-8">
+                            <img src="https://i.imgur.com/8a6Q4qK.png" alt="Logo ADCA" className="h-20 mx-auto mb-4" />
+                            <img src="https://i.imgur.com/W2C4p6f.png" alt="Logo IVECO" className="h-8 mx-auto" />
                         </div>
-                    </div>
-                )}
-                {step === 2 && (
-                    <div className="animate-fade-in">
-                        <h3 className="font-bold text-xl mb-4">Upload de Documentos</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <DropZone type="energia" label="Fatura de Energia Elétrica" acceptedFiles="PDF" />
-                            <DropZone type="gas" label="Fatura de Gás" acceptedFiles="PDF" />
-                            <DropZone type="producao" label="Relatório de Produção" acceptedFiles="XLSX" />
-                        </div>
-                        <div className="flex justify-between mt-6">
-                            <Button onClick={() => setStep(1)} variant="outline">Voltar</Button>
-                            <Button onClick={processFiles} disabled={Object.keys(files).length < 3}>
-                                Validar e Calcular
-                            </Button>
-                        </div>
-                    </div>
-                )}
-                {(isProcessing || summary) && step === 3 && (
-                     <div className="animate-fade-in text-center">
-                        {isProcessing ? (
-                            <>
-                                <div className="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24 mx-auto mb-4" style={{borderTopColor: colors.primary}}></div>
-                                <h3 className="font-bold text-xl mb-2">Processando...</h3>
-                                <p className="text-gray-600">{processingStatus}</p>
-                            </>
-                        ) : (
-                            summary && (
-                                <>
-                                    <CheckCircle className="mx-auto h-24 w-24 text-green-500 mb-4" />
-                                    <h3 className="font-bold text-xl mb-2">Dados Extraídos com Sucesso!</h3>
-                                    <p className="text-gray-600 mb-6">Por favor, confira o resumo abaixo antes de confirmar o envio.</p>
-                                    <div className="bg-gray-100 p-4 rounded-lg text-left grid grid-cols-2 gap-4">
-                                        <p><strong>Energia Elétrica:</strong> {summary.energia}</p>
-                                        <p><strong>Gás Natural:</strong> {summary.gas}</p>
-                                        <p><strong>Unidades Produzidas:</strong> {summary.producao}</p>
-                                        <p className="col-span-2 font-bold text-lg"><strong>Emissões Calculadas:</strong> {summary.emissoes}</p>
+                        <Card className="w-full">
+                            <div className="p-4">
+                                <ProfileSelector selectedProfile={profile} onSelectProfile={setProfile} />
+                                {profile && (
+                                    <div className="mt-6 animate-fade-in">
+                                        <div className="mb-4">
+                                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">E-mail Corporativo</label>
+                                            <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu.email@empresa.com" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                        </div>
+                                        <div className="mb-6">
+                                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">Senha</label>
+                                            <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="******************" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                            <p className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">Esqueceu a senha?</p>
+                                        </div>
+                                        {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
+                                        <Button onClick={handleLogin} variant="secondary" className="w-full" iconPath={icons.LogIn}>Entrar</Button>
                                     </div>
-                                    <div className="flex justify-between mt-6">
-                                        <Button onClick={() => setStep(2)} variant="outline">Corrigir Upload</Button>
-                                        <Button onClick={() => alert('Dados enviados com sucesso!')}>Confirmar e Enviar</Button>
+                                )}
+                                <div className="mt-8 text-center">
+                                    <div className="flex items-center justify-center text-gray-500">
+                                        <Icon path={icons.Shield} className="h-5 w-5 mr-2 text-green-500" />
+                                        <span className="text-sm font-semibold">Ambiente Seguro. Criptografia de Ponta a Ponta.</span>
                                     </div>
-                                </>
-                            )
-                        )}
-                    </div>
-                )}
-            </div>
-        </Card>
-    );
-};
-
-const LogisticaSynapse = () => {
-    const [activeTab, setActiveTab] = useState('notificar');
-    const [showEtiqueta, setShowEtiqueta] = useState(false);
-
-    const historico = [
-        { id: 'BR12345', status: 'Entregue', data: '20/07/2025', co2: '150 kg' },
-        { id: 'BR12346', status: 'Entregue', data: '15/07/2025', co2: '145 kg' },
-        { id: 'BR12347', status: 'Em Trânsito', data: '25/07/2025', co2: 'N/A' },
-        { id: 'BR12348', status: 'Coletado', data: '26/07/2025', co2: 'N/A' },
-    ];
-    
-    const statusColors = {
-        'Entregue': 'bg-green-100 text-green-800',
-        'Em Trânsito': 'bg-blue-100 text-blue-800',
-        'Coletado': 'bg-yellow-100 text-yellow-800',
-    };
-
-    return (
-        <Card>
-            <div className="flex border-b">
-                <button onClick={() => setActiveTab('notificar')} className={`py-2 px-4 font-semibold ${activeTab === 'notificar' ? `border-b-2 border-[${colors.primary}] text-[${colors.primary}]` : 'text-gray-500'}`}>Notificar Carga Pronta</button>
-                <button onClick={() => setActiveTab('historico')} className={`py-2 px-4 font-semibold ${activeTab === 'historico' ? `border-b-2 border-[${colors.primary}] text-[${colors.primary}]` : 'text-gray-500'}`}>Histórico de Envios</button>
-            </div>
-            <div className="p-6">
-                {activeTab === 'notificar' && (
-                    <div className="animate-fade-in">
-                        <h3 className="font-bold text-xl mb-4">Informações da Carga</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <input placeholder="Peso (kg)" className="p-2 border rounded" />
-                            <input placeholder="Dimensões (cm)" className="p-2 border rounded" />
-                            <input placeholder="Janela de Coleta (Início)" type="datetime-local" className="p-2 border rounded" />
-                            <input placeholder="Janela de Coleta (Fim)" type="datetime-local" className="p-2 border rounded" />
-                        </div>
-                        <div className="mt-6 flex justify-end gap-4">
-                            <Button variant="secondary" onClick={() => setShowEtiqueta(true)} icon={Package}>Notificar e Gerar Etiqueta</Button>
-                        </div>
-                        {showEtiqueta && (
-                            <div className="mt-8 border-t pt-6 animate-fade-in">
-                                <h3 className="font-bold text-xl mb-4">Etiqueta Gerada</h3>
-                                <div className="border p-4 rounded-lg bg-gray-50 flex items-center gap-6">
-                                    <QrCode className="h-24 w-24" />
-                                    <div>
-                                        <p><strong>ID de Rastreamento:</strong> BR12349</p>
-                                        <p><strong>Origem:</strong> Fornecedor Exemplo</p>
-                                        <p><strong>Destino:</strong> IVECO Sete Lagoas</p>
-                                    </div>
-                                    <Button className="ml-auto" icon={Printer}>Imprimir Etiqueta</Button>
+                                    <p className="text-xs text-gray-400 mt-2">Autenticação de Dois Fatores (2FA) será solicitada.</p>
                                 </div>
                             </div>
-                        )}
+                        </Card>
                     </div>
-                )}
-                {activeTab === 'historico' && (
-                    <div className="animate-fade-in">
-                        <table className="w-full text-left">
-                            <thead>
-                                <tr className="bg-gray-100">
-                                    <th className="p-3">ID</th>
-                                    <th className="p-3">Status</th>
-                                    <th className="p-3">Data</th>
-                                    <th className="p-3">Pegada de Carbono</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {historico.map(item => (
-                                    <tr key={item.id} className="border-b hover:bg-gray-50">
-                                        <td className="p-3 font-mono">{item.id}</td>
-                                        <td className="p-3">
-                                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusColors[item.status]}`}>
-                                                {item.status}
-                                            </span>
-                                        </td>
-                                        <td className="p-3">{item.data}</td>
-                                        <td className="p-3">{item.co2}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </div>
-        </Card>
-    );
-};
-
-const FornecedorView = ({ activePage }) => {
-    switch (activePage) {
-        case 'Reportar Dados': return <ReportarDadosWizard />;
-        case 'Logística SYNAPSE': return <LogisticaSynapse />;
-        default: return <FornecedorDashboard />;
-    }
-};
-
-
-// --- Jornada da Transportadora ---
-const TransportadoraDashboard = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card><h3 className="font-bold">Viagens em Andamento</h3><p className="text-3xl font-bold mt-2">8</p></Card>
-        <Card><h3 className="font-bold">Ofertas de Frete</h3><p className="text-3xl font-bold mt-2">4</p></Card>
-        <Card><h3 className="font-bold">Performance de Pontualidade</h3><p className="text-3xl font-bold mt-2 text-green-600">98%</p></Card>
-        <Card><h3 className="font-bold">Média de Emissões</h3><p className="text-3xl font-bold mt-2">85 gCO₂e/t.km</p></Card>
-    </div>
-);
-
-const OportunidadesFrete = () => {
-    const fretes = [
-        { type: 'Milk Run', origin: 'Betim, MG', destinations: 3, weight: '4.5t', value: 'R$ 2.800,00' },
-        { type: 'Frete Direto', origin: 'Contagem, MG', destinations: 1, weight: '12t', value: 'R$ 1.900,00' },
-        { type: 'Milk Run', origin: 'São Paulo, SP', destinations: 5, weight: '8t', value: 'R$ 6.500,00' },
-        { type: 'Frete Direto', origin: 'Juiz de Fora, MG', destinations: 1, weight: '6t', value: 'R$ 1.200,00' },
-    ];
-    return (
-        <div>
-            <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center bg-white p-2 rounded-lg shadow-sm">
-                    <Search className="h-5 w-5 text-gray-400 mr-2" />
-                    <input placeholder="Buscar por origem..." className="outline-none" />
                 </div>
-                <Button variant="outline" icon={Filter}>Filtros</Button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {fretes.map((frete, index) => (
-                    <Card key={index}>
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${frete.type === 'Milk Run' ? 'bg-purple-100 text-purple-800' : 'bg-orange-100 text-orange-800'}`}>
-                                    {frete.type}
-                                </span>
-                                <h3 className="font-bold text-xl mt-2">{frete.origin}</h3>
-                                <p className="text-gray-500">{frete.destinations} {frete.destinations > 1 ? 'destinos' : 'destino'}</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="font-bold text-lg">{frete.weight}</p>
-                                <p className="text-gray-500">Peso total</p>
-                            </div>
+            );
+        };
+
+        // --- Layout Principal ---
+        const AppLayout = ({ userProfile, onLogout, children }) => {
+            const profileConfig = {
+                FORNECEDOR: { name: 'Fornecedor', iconPath: icons.Building },
+                TRANSPORTADORA: { name: 'Transportadora', iconPath: icons.Truck },
+                IVECO: { name: 'IVECO / Auditor', iconPath: icons.User },
+            };
+            const [activePage, setActivePage] = useState('Dashboard');
+            const links = {
+                FORNECEDOR: ['Dashboard', 'Reportar Dados', 'Logística SYNAPSE'],
+                TRANSPORTADORA: ['Dashboard', 'Oportunidades', 'App do Motorista'],
+                IVECO: ['Dashboard', 'Matriz MRE', 'Torre de Controle'],
+            };
+
+            return (
+                <div className="flex h-screen bg-gray-100">
+                    <div className={`w-64 bg-[#003366] text-white flex flex-col`}>
+                        <div className="px-6 py-4 flex items-center justify-center border-b border-blue-700">
+                             <img src="https://i.imgur.com/8a6Q4qK.png" alt="Logo ADCA" className="h-16" />
                         </div>
-                        <div className="flex justify-between items-center mt-6 border-t pt-4">
-                            <p className="text-2xl font-bold text-gray-800">{frete.value}</p>
-                            <Button>Aceitar Viagem</Button>
-                        </div>
-                    </Card>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-const MotoristaAppMockup = () => {
-    const [screen, setScreen] = useState(1);
-    const [scanning, setScanning] = useState(false);
-    const [scanned, setScanned] = useState(false);
-
-    const handleScan = () => {
-        setScanning(true);
-        setScanned(false);
-        setTimeout(() => {
-            setScanning(false);
-            setScanned(true);
-        }, 2000);
-    };
-
-    return (
-        <div className="flex justify-center">
-            <div className="w-[360px] h-[740px] bg-white rounded-3xl shadow-2xl p-4 border-8 border-black overflow-hidden flex flex-col">
-                <div className="text-center font-bold text-lg">App do Motorista</div>
-                <div className="flex-1 mt-4">
-                    {screen === 1 && (
-                        <div className="animate-fade-in">
-                            <h2 className="font-bold text-xl mb-4">Minhas Coletas de Hoje</h2>
-                            <div className="space-y-3">
-                                <div className="p-3 bg-gray-100 rounded-lg cursor-pointer" onClick={() => setScreen(2)}>
-                                    <p className="font-bold">Fornecedor A</p>
-                                    <p className="text-sm text-gray-600">Rua Exemplo, 123 - Betim</p>
-                                    <p className="text-sm font-semibold text-blue-600">Horário: 09:00 - 09:30</p>
-                                </div>
-                                <div className="p-3 bg-gray-100 rounded-lg">
-                                    <p className="font-bold">Fornecedor B</p>
-                                    <p className="text-sm text-gray-600">Av. Principal, 456 - Contagem</p>
-                                    <p className="text-sm font-semibold text-blue-600">Horário: 11:00 - 11:30</p>
+                        <div className="px-6 py-4">
+                            <div className="flex items-center">
+                                <Icon path={profileConfig[userProfile].iconPath} className="h-8 w-8 mr-3" />
+                                <div>
+                                    <p className="font-bold text-lg">{profileConfig[userProfile].name}</p>
+                                    <p className="text-xs text-gray-400">empresa_exemplo@email.com</p>
                                 </div>
                             </div>
                         </div>
-                    )}
-                    {screen === 2 && (
-                        <div className="animate-fade-in">
-                            <a href="#" onClick={(e) => {e.preventDefault(); setScreen(1)}} className="text-blue-600 mb-4 block">&larr; Voltar</a>
-                            <h2 className="font-bold text-xl mb-2">Detalhes da Coleta</h2>
-                            <p className="font-bold">Fornecedor A</p>
-                            <p className="text-sm text-gray-600 mb-6">Rua Exemplo, 123 - Betim</p>
-                            
-                            {scanned ? (
-                                <Button className="w-full text-lg py-4" onClick={() => setScreen(3)} icon={Navigation}>
-                                    INICIAR VIAGEM
-                                </Button>
-                            ) : (
-                                <Button className="w-full text-lg py-4" onClick={handleScan} icon={ScanLine} disabled={scanning}>
-                                    {scanning ? 'ESCANENADO...' : 'ESCANEAR QR CODE DA CARGA'}
-                                </Button>
-                            )}
-                            {scanning && <div className="scan-animation mt-6"></div>}
+                        <nav className="flex-1 px-4 py-2 space-y-2">
+                            {links[userProfile].map(link => (
+                                <a key={link} href="#" onClick={(e) => { e.preventDefault(); setActivePage(link); }}
+                                    className={`block py-2.5 px-4 rounded transition duration-200 ${activePage === link ? 'bg-blue-700 text-white' : 'text-gray-300 hover:bg-blue-700 hover:text-white'}`}>
+                                    {link}
+                                </a>
+                            ))}
+                        </nav>
+                        <div className="px-4 py-4 border-t border-blue-700">
+                            <Button onClick={onLogout} variant="outline" className="w-full border-gray-400 text-gray-300 hover:bg-blue-700 hover:text-white">Sair</Button>
                         </div>
-                    )}
-                    {screen === 3 && (
-                        <div className="animate-fade-in h-full flex flex-col">
-                            <a href="#" onClick={(e) => {e.preventDefault(); setScreen(2)}} className="text-blue-600 mb-2 block">&larr; Voltar</a>
-                            <h2 className="font-bold text-xl mb-4">Navegação</h2>
-                            <div className="flex-1 bg-gray-200 rounded-lg overflow-hidden">
-                                <img src="https://placehold.co/360/600/e2e8f0/4a5568?text=Mapa+de+Navega%C3%A7%C3%A3o" alt="Mapa de navegação" className="w-full h-full object-cover" />
-                            </div>
-                        </div>
-                    )}
+                    </div>
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        <header className="bg-white shadow-sm p-4"><h1 className="text-2xl font-bold text-gray-800">{activePage}</h1></header>
+                        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-200 p-6">
+                            {React.cloneElement(children, { activePage })}
+                        </main>
+                    </div>
                 </div>
-            </div>
-            <style jsx>{`
-                .scan-animation {
-                    height: 150px;
-                    background: #eee;
-                    position: relative;
-                    overflow: hidden;
-                    border-radius: 8px;
-                }
-                .scan-animation::after {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 3px;
-                    background: ${colors.action};
-                    animation: scan 1.5s ease-in-out infinite;
-                    box-shadow: 0 0 10px ${colors.action};
-                }
-                @keyframes scan {
-                    0% { top: 0; }
-                    100% { top: 100%; }
-                }
-            `}</style>
-        </div>
-    );
-};
-
-const TransportadoraView = ({ activePage }) => {
-    switch (activePage) {
-        case 'Oportunidades': return <OportunidadesFrete />;
-        case 'App do Motorista': return <MotoristaAppMockup />;
-        default: return <TransportadoraDashboard />;
-    }
-};
-
-
-// --- Jornada da IVECO ---
-const IvecoDashboard = () => (
-    <div>
-        <h2 className="text-xl font-semibold mb-4">Visão Geral da Cadeia de Suprimentos</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card><h3 className="font-bold">Fornecedores Ativos</h3><p className="text-3xl font-bold mt-2">152</p></Card>
-            <Card><h3 className="font-bold">Emissões Totais (Mês)</h3><p className="text-3xl font-bold mt-2">1.200 tCO₂e</p></Card>
-            <Card><h3 className="font-bold">Viagens em Andamento</h3><p className="text-3xl font-bold mt-2">25</p></Card>
-        </div>
-    </div>
-);
-
-const MatrizMRE = () => {
-    const [selectedQuadrant, setSelectedQuadrant] = useState(null);
-
-    const Quadrant = ({ title, bgColor, position, children }) => (
-        <div 
-            className={`flex flex-col justify-center items-center p-4 rounded-lg cursor-pointer transition-all duration-300 ${bgColor} ${selectedQuadrant === title ? 'ring-4 ring-offset-2 ring-blue-500 scale-105' : 'hover:scale-105'}`}
-            onClick={() => setSelectedQuadrant(title)}
-        >
-            <h3 className="font-bold text-lg text-center text-white">{title}</h3>
-            {children}
-        </div>
-    );
-    
-    const fornecedoresCriticos = ['Fornecedor A', 'Fornecedor B', 'Fornecedor C'];
-
-    return (
-        <div className="flex gap-6">
-            <div className="w-2/3">
+            );
+        };
+        
+        // --- Jornada do Fornecedor ---
+        const FornecedorDashboard = () => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <Card>
-                    <h3 className="font-bold text-xl mb-4">Matriz de Relevância de Emissões (MRE)</h3>
-                    <div className="relative aspect-square">
-                        <div className="absolute top-0 left-0 w-full h-full grid grid-cols-2 grid-rows-2 gap-2">
-                            <Quadrant title="Alavancagem" bgColor="bg-blue-400" />
-                            <Quadrant title="Críticos" bgColor="bg-red-500" />
-                            <Quadrant title="Estratégicos" bgColor="bg-green-500" />
-                            <Quadrant title="Rotineiros" bgColor="bg-gray-400" />
+                    <h3 className="font-bold text-lg text-gray-700 flex items-center"><Icon path={icons.CheckCircle} className="mr-2 text-green-500 w-5 h-5"/> Status do Reporte Mensal</h3>
+                    <p className="text-3xl font-bold text-green-600 mt-4">Enviado</p>
+                    <p className="text-gray-500 text-sm">Reporte de Julho/2025 concluído.</p>
+                </Card>
+                <Card>
+                    <h3 className="font-bold text-lg text-gray-700 flex items-center"><Icon path={icons.BarChart2} className="mr-2 text-blue-500 w-5 h-5"/> Performance de Emissões</h3>
+                    <p className="text-3xl font-bold text-gray-800 mt-4">1.25 kgCO₂e/un.</p>
+                    <p className="text-gray-500 text-sm text-green-600">↓ 5% em relação ao mês anterior</p>
+                </Card>
+                <Card className="bg-yellow-50 border-yellow-400 border">
+                    <h3 className="font-bold text-lg text-gray-700 flex items-center"><Icon path={icons.AlertTriangle} className="mr-2 text-yellow-500 w-5 h-5"/> Alertas e Ações Necessárias</h3>
+                    <p className="text-gray-800 mt-4">Nenhuma ação necessária no momento.</p>
+                    <p className="text-gray-500 text-sm">Tudo em conformidade.</p>
+                </Card>
+            </div>
+        );
+
+        const ReportarDadosWizard = () => {
+            const [step, setStep] = useState(1);
+            const [files, setFiles] = useState({});
+            const [isProcessing, setIsProcessing] = useState(false);
+            const [processingStatus, setProcessingStatus] = useState('');
+            const [summary, setSummary] = useState(null);
+
+            const handleFileUpload = (type, file) => setFiles(prev => ({ ...prev, [type]: file }));
+            
+            const processFiles = () => {
+                setIsProcessing(true);
+                setSummary(null);
+                const statuses = ["Lendo documentos com OCR...", "Validando dados...", "Calculando emissões (GHG Protocol)...", "Finalizando..."];
+                let currentStatusIndex = 0;
+                const interval = setInterval(() => {
+                    if (currentStatusIndex < statuses.length) {
+                        setProcessingStatus(statuses[currentStatusIndex++]);
+                    } else {
+                        clearInterval(interval);
+                        setIsProcessing(false);
+                        setSummary({ energia: '15.000 kWh', gas: '500 m³', producao: '12.000 unidades', emissoes: '15.000 kgCO₂e' });
+                        setStep(3);
+                    }
+                }, 1500);
+            };
+
+            const DropZone = ({ type, label, acceptedFiles }) => (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 bg-gray-50">
+                    <Icon path={icons.FileUp} className="mx-auto h-12 w-12 text-gray-400" />
+                    <p className="mt-2 text-sm text-gray-600">{files[type] ? files[type].name : `Arraste e solte ou clique`}</p>
+                    <p className="text-xs text-gray-500">{label} ({acceptedFiles})</p>
+                    <input type="file" className="hidden" onChange={(e) => handleFileUpload(type, e.target.files[0])} />
+                </div>
+            );
+
+            return (
+                <Card>
+                    <div className="p-4">
+                        <div className="flex justify-between items-center mb-8">
+                            {[1, 2, 3].map((s, i, arr) => (
+                                <React.Fragment key={s}>
+                                    <div className="flex items-center">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= s ? `bg-[${colors.primary}] text-white` : 'bg-gray-300'}`}>{s}</div>
+                                        <p className={`ml-2 font-semibold ${step >= s ? `text-[${colors.primary}]` : 'text-gray-500'}`}>{['Período', 'Upload', 'Validação'][i]}</p>
+                                    </div>
+                                    {i < arr.length - 1 && <div className={`flex-1 h-1 mx-4 ${step > s ? `bg-[${colors.primary}]` : 'bg-gray-300'}`}></div>}
+                                </React.Fragment>
+                            ))}
                         </div>
-                        {/* Eixos */}
-                        <div className="absolute -bottom-8 left-0 w-full text-center font-semibold text-gray-600">Risco na Cadeia de Suprimentos &rarr;</div>
-                        <div className="absolute -left-12 top-0 h-full flex items-center transform -rotate-90 font-semibold text-gray-600">Volume de Emissões &rarr;</div>
+                        {step === 1 && (
+                            <div className="animate-fade-in">
+                                <h3 className="font-bold text-xl mb-4">Selecione o Período de Reporte</h3>
+                                <select className="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option>Julho / 2025</option><option>Junho / 2025</option>
+                                </select>
+                                <div className="text-right mt-6"><Button onClick={() => setStep(2)} iconPath={icons.ArrowRight}>Próximo</Button></div>
+                            </div>
+                        )}
+                        {step === 2 && (
+                            <div className="animate-fade-in">
+                                <h3 className="font-bold text-xl mb-4">Upload de Documentos</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <DropZone type="energia" label="Fatura de Energia" acceptedFiles="PDF" />
+                                    <DropZone type="gas" label="Fatura de Gás" acceptedFiles="PDF" />
+                                    <DropZone type="producao" label="Relatório de Produção" acceptedFiles="XLSX" />
+                                </div>
+                                <div className="flex justify-between mt-6">
+                                    <Button onClick={() => setStep(1)} variant="outline">Voltar</Button>
+                                    <Button onClick={processFiles} disabled={Object.keys(files).length < 3}>Validar e Calcular</Button>
+                                </div>
+                            </div>
+                        )}
+                        {step === 3 && (
+                            <div className="animate-fade-in text-center">
+                                {isProcessing ? (
+                                    <React.Fragment>
+                                        <div className="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24 mx-auto mb-4"></div>
+                                        <h3 className="font-bold text-xl mb-2">Processando...</h3><p className="text-gray-600">{processingStatus}</p>
+                                    </React.Fragment>
+                                ) : (
+                                    summary && (
+                                        <React.Fragment>
+                                            <Icon path={icons.CheckCircle} className="mx-auto h-24 w-24 text-green-500 mb-4" />
+                                            <h3 className="font-bold text-xl mb-2">Dados Extraídos com Sucesso!</h3>
+                                            <p className="text-gray-600 mb-6">Confira o resumo antes de confirmar.</p>
+                                            <div className="bg-gray-100 p-4 rounded-lg text-left grid grid-cols-2 gap-4">
+                                                <p><strong>Energia:</strong> {summary.energia}</p><p><strong>Gás:</strong> {summary.gas}</p>
+                                                <p><strong>Produção:</strong> {summary.producao}</p>
+                                                <p className="col-span-2 font-bold text-lg"><strong>Emissões:</strong> {summary.emissoes}</p>
+                                            </div>
+                                            <div className="flex justify-between mt-6">
+                                                <Button onClick={() => setStep(2)} variant="outline">Corrigir</Button>
+                                                <Button onClick={() => alert('Dados enviados!')}>Confirmar Envio</Button>
+                                            </div>
+                                        </React.Fragment>
+                                    )
+                                )}
+                            </div>
+                        )}
                     </div>
                 </Card>
-            </div>
-            <div className="w-1/3">
-                <Card className="h-full">
-                    {selectedQuadrant ? (
-                        <div className="animate-fade-in">
-                            <h3 className="font-bold text-xl mb-4">Fornecedores: {selectedQuadrant}</h3>
-                            <ul className="list-disc pl-5 space-y-2">
-                                {fornecedoresCriticos.map(f => <li key={f}>{f}</li>)}
-                            </ul>
-                        </div>
-                    ) : (
-                        <div className="text-center text-gray-500 h-full flex flex-col justify-center">
-                            <Filter className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                            <p>Clique em um quadrante da matriz para ver a lista de fornecedores correspondentes.</p>
-                        </div>
-                    )}
+            );
+        };
+        
+        const LogisticaSynapse = () => {
+            const [activeTab, setActiveTab] = useState('notificar');
+            const [showEtiqueta, setShowEtiqueta] = useState(false);
+            const historico = [
+                { id: 'BR12345', status: 'Entregue', data: '20/07/2025', co2: '150 kg' },
+                { id: 'BR12347', status: 'Em Trânsito', data: '25/07/2025', co2: 'N/A' },
+                { id: 'BR12348', status: 'Coletado', data: '26/07/2025', co2: 'N/A' },
+            ];
+            const statusColors = { 'Entregue': 'bg-green-100 text-green-800', 'Em Trânsito': 'bg-blue-100 text-blue-800', 'Coletado': 'bg-yellow-100 text-yellow-800' };
+
+            return (
+                <Card>
+                    <div className="flex border-b">
+                        <button onClick={() => setActiveTab('notificar')} className={`py-2 px-4 font-semibold ${activeTab === 'notificar' ? `border-b-2 border-[${colors.primary}] text-[${colors.primary}]` : 'text-gray-500'}`}>Notificar Carga</button>
+                        <button onClick={() => setActiveTab('historico')} className={`py-2 px-4 font-semibold ${activeTab === 'historico' ? `border-b-2 border-[${colors.primary}] text-[${colors.primary}]` : 'text-gray-500'}`}>Histórico</button>
+                    </div>
+                    <div className="p-6">
+                        {activeTab === 'notificar' && (
+                            <div className="animate-fade-in">
+                                <h3 className="font-bold text-xl mb-4">Informações da Carga</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <input placeholder="Peso (kg)" className="p-2 border rounded" /><input placeholder="Dimensões (cm)" className="p-2 border rounded" />
+                                    <input type="datetime-local" className="p-2 border rounded" /><input type="datetime-local" className="p-2 border rounded" />
+                                </div>
+                                <div className="mt-6 flex justify-end"><Button variant="secondary" onClick={() => setShowEtiqueta(true)} iconPath={icons.Package}>Notificar e Gerar Etiqueta</Button></div>
+                                {showEtiqueta && (
+                                    <div className="mt-8 border-t pt-6 animate-fade-in">
+                                        <h3 className="font-bold text-xl mb-4">Etiqueta Gerada</h3>
+                                        <div className="border p-4 rounded-lg bg-gray-50 flex items-center gap-6">
+                                            <Icon path={icons.QrCode} className="h-24 w-24" />
+                                            <div>
+                                                <p><strong>ID:</strong> BR12349</p><p><strong>Origem:</strong> Fornecedor Exemplo</p><p><strong>Destino:</strong> IVECO Sete Lagoas</p>
+                                            </div>
+                                            <Button className="ml-auto" iconPath={icons.Printer}>Imprimir Etiqueta</Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        {activeTab === 'historico' && (
+                            <div className="animate-fade-in">
+                                <table className="w-full text-left">
+                                    <thead><tr className="bg-gray-100"><th className="p-3">ID</th><th className="p-3">Status</th><th className="p-3">Data</th><th className="p-3">CO₂</th></tr></thead>
+                                    <tbody>
+                                        {historico.map(item => (
+                                            <tr key={item.id} className="border-b hover:bg-gray-50">
+                                                <td className="p-3 font-mono">{item.id}</td>
+                                                <td className="p-3"><span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusColors[item.status]}`}>{item.status}</span></td>
+                                                <td className="p-3">{item.data}</td><td className="p-3">{item.co2}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
                 </Card>
+            );
+        };
+        
+        const FornecedorView = ({ activePage }) => {
+            if (activePage === 'Reportar Dados') return <ReportarDadosWizard />;
+            if (activePage === 'Logística SYNAPSE') return <LogisticaSynapse />;
+            return <FornecedorDashboard />;
+        };
+
+        // --- Jornada da Transportadora ---
+        const TransportadoraDashboard = () => (
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Card><h3 className="font-bold">Viagens em Andamento</h3><p className="text-3xl font-bold mt-2">8</p></Card>
+                <Card><h3 className="font-bold">Ofertas de Frete</h3><p className="text-3xl font-bold mt-2">4</p></Card>
+                <Card><h3 className="font-bold">Pontualidade</h3><p className="text-3xl font-bold mt-2 text-green-600">98%</p></Card>
+                <Card><h3 className="font-bold">Média Emissões</h3><p className="text-3xl font-bold mt-2">85 gCO₂e/t.km</p></Card>
             </div>
-        </div>
-    );
-};
+        );
 
-const TorreDeControle = () => (
-    <div className="h-full w-full bg-white rounded-lg shadow-md overflow-hidden relative">
-        <img src="https://placehold.co/1280/720/dbeafe/1e3a8a?text=Mapa+Torre+de+Controle" alt="Mapa do Brasil com rotas" className="w-full h-full object-cover" />
-        {/* Ícones de caminhões simulados */}
-        <div className="absolute top-[60%] left-[55%] truck-icon">
-            <Truck className="text-white bg-blue-600 p-1 rounded-full h-8 w-8 shadow-lg" />
-            <div className="tooltip">SP &rarr; SLG | ETA: 14:30</div>
-        </div>
-        <div className="absolute top-[50%] left-[45%] truck-icon">
-            <Truck className="text-white bg-red-600 p-1 rounded-full h-8 w-8 shadow-lg animate-pulse" />
-            <div className="tooltip">RJ &rarr; SLG | Atrasado!</div>
-        </div>
-        <div className="absolute top-[65%] left-[40%] truck-icon">
-            <Truck className="text-white bg-blue-600 p-1 rounded-full h-8 w-8 shadow-lg" />
-            <div className="tooltip">PR &rarr; SLG | ETA: 18:00</div>
-        </div>
-        <style jsx>{`
-            .truck-icon {
-                position: absolute;
-                transform: translate(-50%, -50%);
-                cursor: pointer;
+        const OportunidadesFrete = () => {
+             const fretes = [
+                { type: 'Milk Run', origin: 'Betim, MG', destinations: 3, weight: '4.5t', value: 'R$ 2.800,00' },
+                { type: 'Frete Direto', origin: 'Contagem, MG', destinations: 1, weight: '12t', value: 'R$ 1.900,00' },
+            ];
+            return (
+                <div>
+                    <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center bg-white p-2 rounded-lg shadow-sm">
+                            <Icon path={icons.Search} className="h-5 w-5 text-gray-400 mr-2" />
+                            <input placeholder="Buscar por origem..." className="outline-none" />
+                        </div>
+                        <Button variant="outline" iconPath={icons.Filter}>Filtros</Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {fretes.map((frete, index) => (
+                            <Card key={index}>
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${frete.type === 'Milk Run' ? 'bg-purple-100 text-purple-800' : 'bg-orange-100 text-orange-800'}`}>{frete.type}</span>
+                                        <h3 className="font-bold text-xl mt-2">{frete.origin}</h3>
+                                        <p className="text-gray-500">{frete.destinations} {frete.destinations > 1 ? 'destinos' : 'destino'}</p>
+                                    </div>
+                                    <div className="text-right"><p className="font-bold text-lg">{frete.weight}</p><p className="text-gray-500">Peso total</p></div>
+                                </div>
+                                <div className="flex justify-between items-center mt-6 border-t pt-4">
+                                    <p className="text-2xl font-bold text-gray-800">{frete.value}</p><Button>Aceitar Viagem</Button>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const MotoristaAppMockup = () => {
+            const [screen, setScreen] = useState(1);
+            const [scanning, setScanning] = useState(false);
+            const [scanned, setScanned] = useState(false);
+
+            const handleScan = () => {
+                setScanning(true);
+                setScanned(false);
+                setTimeout(() => { setScanning(false); setScanned(true); }, 2000);
+            };
+
+            return (
+                <div className="flex justify-center">
+                    <div className="w-[360px] h-[740px] bg-white rounded-3xl shadow-2xl p-4 border-8 border-black overflow-hidden flex flex-col">
+                        <div className="text-center font-bold text-lg">App do Motorista</div>
+                        <div className="flex-1 mt-4">
+                            {screen === 1 && (
+                                <div className="animate-fade-in">
+                                    <h2 className="font-bold text-xl mb-4">Minhas Coletas de Hoje</h2>
+                                    <div className="space-y-3">
+                                        <div className="p-3 bg-gray-100 rounded-lg cursor-pointer" onClick={() => setScreen(2)}>
+                                            <p className="font-bold">Fornecedor A</p><p className="text-sm text-gray-600">Rua Exemplo, 123 - Betim</p><p className="text-sm font-semibold text-blue-600">Horário: 09:00 - 09:30</p>
+                                        </div>
+                                         <div className="p-3 bg-gray-100 rounded-lg"><p className="font-bold">Fornecedor B</p><p className="text-sm text-gray-600">Av. Principal, 456</p><p className="text-sm font-semibold text-blue-600">Horário: 11:00</p></div>
+                                    </div>
+                                </div>
+                            )}
+                            {screen === 2 && (
+                                <div className="animate-fade-in">
+                                    <a href="#" onClick={(e) => {e.preventDefault(); setScreen(1)}} className="text-blue-600 mb-4 block">&larr; Voltar</a>
+                                    <h2 className="font-bold text-xl mb-2">Detalhes da Coleta</h2>
+                                    <p className="font-bold">Fornecedor A</p><p className="text-sm text-gray-600 mb-6">Rua Exemplo, 123 - Betim</p>
+                                    {scanned ? (
+                                        <Button className="w-full text-lg py-4" onClick={() => setScreen(3)} iconPath={icons.Navigation}>INICIAR VIAGEM</Button>
+                                    ) : (
+                                        <Button className="w-full text-lg py-4" onClick={handleScan} iconPath={icons.ScanLine} disabled={scanning}>{scanning ? 'ESCANENADO...' : 'ESCANEAR QR CODE'}</Button>
+                                    )}
+                                    {scanning && <div className="h-[150px] bg-gray-200 mt-6 rounded-lg relative overflow-hidden"><div className="absolute top-0 left-0 w-full h-1 bg-[#00C853] shadow-[0_0_10px_#00C853] animate-scan"></div></div>}
+                                </div>
+                            )}
+                             {screen === 3 && (
+                                <div className="animate-fade-in h-full flex flex-col">
+                                    <a href="#" onClick={(e) => {e.preventDefault(); setScreen(2)}} className="text-blue-600 mb-2 block">&larr; Voltar</a>
+                                    <h2 className="font-bold text-xl mb-4">Navegação</h2>
+                                    <div className="flex-1 bg-gray-200 rounded-lg overflow-hidden">
+                                        <img src="https://placehold.co/360x600/e2e8f0/4a5568?text=Mapa+de+Navega%C3%A7%C3%A3o" alt="Mapa" className="w-full h-full object-cover" />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <style>{`@keyframes scan { 0% { top: 0; } 100% { top: 100%; } } .animate-scan { animation: scan 1.5s ease-in-out infinite; }`}</style>
+                    </div>
+                </div>
+            );
+        };
+        
+        const TransportadoraView = ({ activePage }) => {
+            if (activePage === 'Oportunidades') return <OportunidadesFrete />;
+            if (activePage === 'App do Motorista') return <MotoristaAppMockup />;
+            return <TransportadoraDashboard />;
+        };
+
+        // --- Jornada da IVECO ---
+        const IvecoDashboard = () => (
+            <div>
+                <h2 className="text-xl font-semibold mb-4">Visão Geral da Cadeia de Suprimentos</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <Card><h3 className="font-bold">Fornecedores Ativos</h3><p className="text-3xl font-bold mt-2">152</p></Card>
+                    <Card><h3 className="font-bold">Emissões Totais (Mês)</h3><p className="text-3xl font-bold mt-2">1.200 tCO₂e</p></Card>
+                    <Card><h3 className="font-bold">Viagens em Andamento</h3><p className="text-3xl font-bold mt-2">25</p></Card>
+                </div>
+            </div>
+        );
+
+        const MatrizMRE = () => {
+            const [selectedQuadrant, setSelectedQuadrant] = useState(null);
+            const Quadrant = ({ title, bgColor }) => (
+                <div onClick={() => setSelectedQuadrant(title)} className={`flex flex-col justify-center items-center p-4 rounded-lg cursor-pointer transition-all duration-300 ${bgColor} ${selectedQuadrant === title ? 'ring-4 ring-offset-2 ring-blue-500 scale-105' : 'hover:scale-105'}`}>
+                    <h3 className="font-bold text-lg text-center text-white">{title}</h3>
+                </div>
+            );
+            return (
+                <div className="flex flex-col lg:flex-row gap-6">
+                    <div className="w-full lg:w-2/3">
+                        <Card>
+                            <h3 className="font-bold text-xl mb-4">Matriz de Relevância de Emissões (MRE)</h3>
+                            <div className="relative aspect-square">
+                                <div className="absolute top-0 left-0 w-full h-full grid grid-cols-2 grid-rows-2 gap-2">
+                                    <Quadrant title="Alavancagem" bgColor="bg-blue-400" /><Quadrant title="Críticos" bgColor="bg-red-500" />
+                                    <Quadrant title="Estratégicos" bgColor="bg-green-500" /><Quadrant title="Rotineiros" bgColor="bg-gray-400" />
+                                </div>
+                                <div className="absolute -bottom-8 left-0 w-full text-center font-semibold text-gray-600">Risco na Cadeia de Suprimentos &rarr;</div>
+                                <div className="absolute -left-12 top-0 h-full flex items-center transform -rotate-90 font-semibold text-gray-600">Volume de Emissões &rarr;</div>
+                            </div>
+                        </Card>
+                    </div>
+                    <div className="w-full lg:w-1/3">
+                        <Card className="h-full">
+                            {selectedQuadrant ? (
+                                <div className="animate-fade-in">
+                                    <h3 className="font-bold text-xl mb-4">Fornecedores: {selectedQuadrant}</h3>
+                                    <ul className="list-disc pl-5 space-y-2">{['Fornecedor A', 'Fornecedor B'].map(f => <li key={f}>{f}</li>)}</ul>
+                                </div>
+                            ) : (
+                                <div className="text-center text-gray-500 h-full flex flex-col justify-center items-center">
+                                    <Icon path={icons.Filter} className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                                    <p>Clique em um quadrante para ver os fornecedores.</p>
+                                </div>
+                            )}
+                        </Card>
+                    </div>
+                </div>
+            );
+        };
+
+        const TorreDeControle = () => {
+            const trucks = [
+                { top: '60%', left: '55%', colorClass: 'bg-blue-600', text: 'SP &rarr; SLG | ETA: 14:30', pulse: false },
+                { top: '50%', left: '45%', colorClass: 'bg-red-600', text: 'RJ &rarr; SLG | Atrasado!', pulse: true },
+                { top: '65%', left: '40%', colorClass: 'bg-blue-600', text: 'PR &rarr; SLG | ETA: 18:00', pulse: false }
+            ];
+
+            return (
+                <div className="h-full w-full bg-white rounded-lg shadow-md overflow-hidden relative">
+                    <img src="https://placehold.co/1280x720/dbeafe/1e3a8a?text=Mapa+Torre+de+Controle" alt="Mapa" className="w-full h-full object-cover" />
+                    {/* Tailwind JIT Hint: bg-blue-600 bg-red-600 */}
+                    {trucks.map((truck, i) => (
+                        <div key={i} className="group absolute" style={{ top: truck.top, left: truck.left }}>
+                            <div className={`text-white ${truck.colorClass} p-1 rounded-full h-8 w-8 shadow-lg cursor-pointer ${truck.pulse ? 'animate-pulse' : ''}`}>
+                                <Icon path={icons.Truck} className="w-full h-full"/>
+                            </div>
+                            <div className="invisible group-hover:visible w-40 bg-gray-800 text-white text-center rounded-md py-1 px-2 absolute z-10 bottom-full left-1/2 -translate-x-1/2 transition-opacity duration-300 opacity-0 group-hover:opacity-100">{truck.text}</div>
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+        
+        const IvecoView = ({ activePage }) => {
+            if (activePage === 'Matriz MRE') return <MatrizMRE />;
+            if (activePage === 'Torre de Controle') return <TorreDeControle />;
+            return <IvecoDashboard />;
+        };
+
+        // --- Componente Principal ---
+        const App = () => {
+            const [userProfile, setUserProfile] = useState(null);
+            const handleLogin = (profile) => setUserProfile(profile);
+            const handleLogout = () => setUserProfile(null);
+
+            const renderView = () => {
+                switch(userProfile) {
+                    case 'FORNECEDOR': return <FornecedorView />;
+                    case 'TRANSPORTADORA': return <TransportadoraView />;
+                    case 'IVECO': return <IvecoView />;
+                    default: return null;
+                }
+            };
+
+            if (!userProfile) {
+                return <LoginPage onLogin={handleLogin} />;
             }
-            .tooltip {
-                visibility: hidden;
-                width: 160px;
-                background-color: #333;
-                color: #fff;
-                text-align: center;
-                border-radius: 6px;
-                padding: 5px;
-                position: absolute;
-                z-index: 1;
-                bottom: 125%;
-                left: 50%;
-                margin-left: -80px;
-                opacity: 0;
-                transition: opacity 0.3s;
-            }
-            .truck-icon:hover .tooltip {
-                visibility: visible;
-                opacity: 1;
-            }
-        `}</style>
-    </div>
-);
+            return <AppLayout userProfile={userProfile} onLogout={handleLogout}>{renderView()}</AppLayout>;
+        };
 
-const IvecoView = ({ activePage }) => {
-    switch (activePage) {
-        case 'Matriz MRE': return <MatrizMRE />;
-        case 'Torre de Controle': return <TorreDeControle />;
-        default: return <IvecoDashboard />;
-    }
-};
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
 
-
-// --- Componente Principal ---
-export default function App() {
-  const [userProfile, setUserProfile] = useState(null);
-
-  const handleLogin = (profile) => {
-    setUserProfile(profile);
-  };
-
-  const handleLogout = () => {
-    setUserProfile(null);
-  };
-  
-  const renderView = () => {
-      switch(userProfile) {
-          case 'FORNECEDOR': return <FornecedorView />;
-          case 'TRANSPORTADORA': return <TransportadoraView />;
-          case 'IVECO': return <IvecoView />;
-          default: return null;
-      }
-  }
-
-  if (!userProfile) {
-    return <LoginPage onLogin={handleLogin} />;
-  }
-
-  return (
-    <AppLayout userProfile={userProfile} onLogout={handleLogout}>
-        {renderView()}
-    </AppLayout>
-  );
-}
+</body>
+</html>
